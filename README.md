@@ -1,7 +1,29 @@
 mlops_cookiecutter
 ==============================
 
-A short description of the project.
+Description and Motivation
+--------
+This is a ML project on the popular MNIST fashion dataset. 
+
+The motivation behind the project isn't diving deep into NN architectures and optimizing 
+given metrics, but more so organizing the project in a correct, formal way using proper 
+coding techniques like type hinting and available tools and libraries like dvc, 
+cookiecutter, black, isort etc...
+
+This project follows step by step the guidelines prodived by DTU's course 02476: Machine 
+Learning Operations.
+
+
+How To Run
+--------
+All commands should be run from the base parent directory MNIST_mlops.
+
+Train the model: python src/models/train_model.py
+Test the model on unseen data: python src/models/predict_model.py
+Visualize the 2d features of the training dat: python src/visualization/visualize.py
+
+In case anything cannot run and you get an error: "error: no commands supplied", just run: python src/<subdir>/<script.py> install
+
 
 Project Organization
 ------------
@@ -55,13 +77,3 @@ Project Organization
 --------
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
-
-
---------
-All commands should be run from the base parent directory mlops_cookiecutter.
-
-Train the model: python src/models/train_model.py
-Test the model on unseen data: python src/models/predict_model.py
-Visualize the 2d features of the training dat: python src/visualization/visualize.py
-
-In case anything cannot run and you get an error: "error: no commands supplied", just run: python src/<subdir>/<script.py> install
