@@ -1,3 +1,6 @@
+# Ignore temp folder
+tmp
+
 # Ignore earlier figures and models
 reports/models/v*
 reports/figures/v*
