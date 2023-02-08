@@ -233,7 +233,7 @@ def save_data(data: List[np.ndarray], save_dir: str) -> None:
 )
 @click.argument(
     "output_datadir",
-    default="/home/glob/Documents/github/MNSIT_mlops/data/processed",
+    default="/home/glob/Documents/github/MNIST_mlops/data/processed",
     type=click.Path(),
 )
 def main(input_datadir: str, output_datadir: str) -> None:
