@@ -2,7 +2,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import click
 import numpy as np
@@ -10,7 +10,7 @@ import torch
 from dotenv import find_dotenv, load_dotenv
 
 
-def load_mnist(mnist_dir: str) -> List[np.ndarray]:
+def load_mnist(mnist_dir: str, train_version: Union[str, int]=5) -> List[np.ndarray]:
     """
     Loads the train and validation MNIST data from the data/raw folder
 
@@ -18,6 +18,9 @@ def load_mnist(mnist_dir: str) -> List[np.ndarray]:
     ----------
     mnist_dir : str, optional
         the directory where the raw MNIST (.npz) data are
+    train_version : Union[str, int], optional
+        the specific training dataset that the model ("first" means the first one, while 
+        an integer specifies the version x, meaning the "train_x.npz" dataset)
 
     Returns
     -------
@@ -27,7 +30,27 @@ def load_mnist(mnist_dir: str) -> List[np.ndarray]:
     """
 
     print(f"\nLoading MNIST data from: {mnist_dir}")
-    data = np.load(mnist_dir + "/train_1.npz")
+
+    if train_version == "first":
+        # Get a list of all files in the directory
+        files = os.listdir(mnist_dir)
+        
+        # Filter the list to only include files that match the pattern "train_x.npz"
+        train_files = [f for f in files if f.startswith("train_") and f.endswith(".npz")]
+        
+        # Sort the list of train files by the number x in ascending order
+        train_files.sort(key=lambda x: int(x.split("_")[1].split(".")[0]))
+        
+        # Load the first (smallest x) train file with numpy.load
+        train_file = os.path.join(mnist_dir, train_files[0])
+    else:
+        # train file name
+        train_fname = "train_" + str(train_version) + ".npz"
+
+        # Load the specific training dataset that was asked
+        train_file = os.path.join(mnist_dir, train_fname)
+
+    data = np.load(train_file)
     train_images = data["images"]
     print(f"Shape of training images: {train_images.shape}")
     train_labels = data["labels"]
@@ -188,12 +211,12 @@ def save_data(data: List[np.ndarray], save_dir: str) -> None:
 @click.command()
 @click.argument(
     "input_datadir",
-    default="/home/glob/Documents/github/dtu_mlops/mlops_cookiecutter/data/raw",
+    default="/home/glob/Documents/github/MNIST_mlops/data/raw",
     type=click.Path(exists=True),
 )
 @click.argument(
     "output_datadir",
-    default="/home/glob/Documents/github/dtu_mlops/mlops_cookiecutter/data/processed",
+    default="/home/glob/Documents/github/MNSIT_mlops/data/processed",
     type=click.Path(),
 )
 def main(input_datadir: str, output_datadir: str) -> None:
