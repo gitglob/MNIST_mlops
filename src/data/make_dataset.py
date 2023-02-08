@@ -10,57 +10,74 @@ import torch
 from dotenv import find_dotenv, load_dotenv
 
 
-def load_mnist(mnist_dir: str, train_version: Union[str, int]=5) -> List[np.ndarray]:
+def load_mnist(raw_dir: str, train_version: Union[str, int]="all") -> List[np.ndarray]:
     """
     Loads the train and validation MNIST data from the data/raw folder
 
     Parameters
     ----------
-    mnist_dir : str, optional
+    raw_dir : str
         the directory where the raw MNIST (.npz) data are
     train_version : Union[str, int], optional
-        the specific training dataset that the model ("first" means the first one, while 
-        an integer specifies the version x, meaning the "train_x.npz" dataset)
+        the specific training dataset that the model 
+            - "first" means the first one
+            - an integer specifies the version x, meaning the "train_x.npz" dataset
+            - "all" means to load the data from every single file
 
     Returns
     -------
-    data_out : list
+    data_out : List[np.ndarray]
         4d list with the numpy arrays containing the training and validation
         data [train_images, train_labels, validation_images, validation_labels].
     """
 
-    print(f"\nLoading MNIST data from: {mnist_dir}")
+    print(f"\nLoading MNIST data from: {raw_dir}")
 
-    if train_version == "first":
-        # Get a list of all files in the directory
-        files = os.listdir(mnist_dir)
-        
-        # Filter the list to only include files that match the pattern "train_x.npz"
-        train_files = [f for f in files if f.startswith("train_") and f.endswith(".npz")]
-        
-        # Sort the list of train files by the number x in ascending order
-        train_files.sort(key=lambda x: int(x.split("_")[1].split(".")[0]))
-        
-        # Load the first (smallest x) train file with numpy.load
-        train_file = os.path.join(mnist_dir, train_files[0])
+    # Get a list of all files in the directory
+    files = os.listdir(raw_dir)
+    
+    # Filter the list to only include files that match the pattern "train_x.npz"
+    train_files = [f for f in files if f.startswith("train_") and f.endswith(".npz")]
+    
+    # Sort the list of train files by the number x in ascending order
+    train_files.sort(key=lambda x: int(x.split("_")[1].split(".")[0]))
+
+    # check which version of data we want
+    if train_version == "all":
+        # Load each train file and split it into train_images and train_labels
+        train_image_list = []
+        train_label_list = []
+        for train_file in train_files:
+            file_path = os.path.join(raw_dir, train_file)
+            data = np.load(file_path)
+            train_image_list.append(data['images'])
+            train_label_list.append(data['labels'])
+            
+            # Concatenate the train images and labels lists into a single numpy array
+            train_images = np.concatenate(train_image_list)
+            train_labels = np.concatenate(train_label_list)
     else:
-        # train file name
-        train_fname = "train_" + str(train_version) + ".npz"
+        if train_version == "first":        
+            # Load the first (smallest x) train file with numpy.load
+            train_file = os.path.join(raw_dir, train_files[0])
+        else:
+            # Train file name
+            train_fname = "train_" + str(train_version) + ".npz"
 
-        # Load the specific training dataset that was asked
-        train_file = os.path.join(mnist_dir, train_fname)
+            # Load the specific training dataset that was asked
+            train_file = os.path.join(raw_dir, train_fname)
 
-    data = np.load(train_file)
-    train_images = data["images"]
+        # Load the specific training data file
+        data = np.load(train_file)
+        train_images = data["images"]
+        train_labels = data["labels"]
+
     print(f"Shape of training images: {train_images.shape}")
-    train_labels = data["labels"]
-    _ = data["allow_pickle"]
 
-    data = np.load(mnist_dir + "/test.npz")
+    data = np.load(raw_dir + "/test.npz")
     validation_images = data["images"]
     print(f"Shape of validation images: {validation_images.shape}")
     validation_labels = data["labels"]
-    _ = data["allow_pickle"]
 
     data_out = [
         train_images,
