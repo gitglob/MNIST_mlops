@@ -5,25 +5,17 @@ from typing import Callable, Optional, Tuple, Union
 import torch
 from model import MyModel
 from torch import nn
-from utils.model_utils import (
-    get_latest_version,
-    load_model,
-    load_tensors,
-    save_latest_model,
-    save_model,
-)
+
 import hydra
 from omegaconf import OmegaConf
 import logging
 
 log = logging.getLogger(__name__)
 
+from utils.model_utils import ModelUtils
 
-def validation(
-    model: nn.Module,
-    validloader: torch.utils.data.DataLoader,
-    criterion: Union[Callable, nn.Module],
-) -> Tuple[float, float]:
+
+def validation(util) -> Tuple[float, float]:
     """
     Validated the training process n the validation set.
 
@@ -44,11 +36,11 @@ def validation(
 
     accuracy = 0
     valid_loss = 0
-    for images, labels in validloader:
+    for images, labels in util.validloader:
         images = images.resize_(images.size()[0], 784)
 
-        _, output = model.forward(images)
-        valid_loss += criterion(output, labels).item()
+        _, output = util.model.forward(images)
+        valid_loss += util.criterion(output, labels).item()
 
         # Calculating the accuracy
         # Model's output is log-softmax, take exponential to get the probabilities
@@ -62,15 +54,7 @@ def validation(
     return valid_loss, accuracy
 
 
-def train(
-    model: nn.Module,
-    trainloader: torch.utils.data.DataLoader,
-    testloader: torch.utils.data.DataLoader,
-    criterion: Union[Callable, nn.Module],
-    optimizer: Optional[torch.optim.Optimizer] = None,
-    epochs: int = 5,
-    print_every: int = 40,
-) -> None:
+def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
     """
     Validated the training process n the validation set.
 
@@ -88,13 +72,7 @@ def train(
     None
     """
 
-    # check which version of the model we are running
-    model_relative_dir = "models"
-    version = get_latest_version(model_relative_dir) + 1
-
     # train the network
-    if optimizer is None:
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
     step = 0
     train_steps = []
     test_steps = []
@@ -107,24 +85,24 @@ def train(
     test_accuracies = []
     try:
         for e in range(epochs):
-            # Model in training mode, dropout is on
-            model.train()
-            for images, labels in trainloader:
+            # util.Model in training mode, dropout is on
+            util.model.train()
+            for images, labels in util.trainloader:
                 train_steps.append(step)
 
                 # Flatten images into a 784 long vector
                 images.resize_(images.size()[0], 784)
 
-                optimizer.zero_grad()
+                util.optimizer.zero_grad()
 
-                features, output = model.forward(images)
-                ps = torch.exp(output)
+                features, output = util.model.forward(images)
+                ps = torch.nn.functional.softmax(output, dim=1)
                 _, predicted = torch.max(ps, dim=1)
 
                 # calculate loss
-                loss = criterion(output, labels)
+                loss = util.criterion(output, labels)
                 loss.backward()
-                optimizer.step()
+                util.optimizer.step()
 
                 # calculate running loss
                 running_loss += loss.item()
@@ -138,30 +116,34 @@ def train(
                 train_accuracies.append((predicted == labels).sum().item() / len(labels))
 
                 if step % print_every == 0:
+                    log.info("\n")
                     test_steps.append(step)
-                    # Model in inference mode, dropout is off
-                    model.eval()
+
+                    # util.Model in inference mode, dropout is off
+                    util.model.eval()
 
                     # Turn off gradients for validation, will speed up inference
                     with torch.no_grad():
-                        test_loss, accuracy = validation(model, testloader, criterion)
+                        test_loss, accuracy = validation(util)
 
-                    log.info(
+                    print(
                         "Epoch: {}/{}.. ".format(e + 1, epochs),
                         "Training Loss: {:.3f}.. ".format(running_loss / print_every),
                         "Training Accuracy: {:.3f}.. ".format(
                             running_correct / running_tot
                         ),
-                        "Test Loss: {:.3f}.. ".format(test_loss / len(testloader)),
-                        "Test Accuracy: {:.3f}".format(accuracy / len(testloader)),
+                        "Test Loss: {:.3f}.. ".format(test_loss / len(util.validloader)),
+                        "Test Accuracy: {:.3f}".format(accuracy / len(util.validloader)),
                     )
 
                     # log current loss and accuracy
                     test_losses.append(test_loss / print_every)
-                    test_accuracies.append(accuracy / len(testloader))
+                    test_accuracies.append(accuracy / len(util.validloader))
 
+                    # update the latest version
+                    util.update()
                     # save the model every logging period
-                    save_model(model, version)
+                    util.save_model()
 
                     # visualize and save the loss and accuracy thus far
                     visualize_metrics(
@@ -181,14 +163,15 @@ def train(
                     running_tot = 0
 
                     # Make sure dropout and grads are on for training
-                    model.train()
+                    util.model.train()
 
                 # increase the step
                 step += 1
-    # if the training ends or is interrupted, we want the model and the last
+    # if the training ends or is interrupted, we want the util.model and the last
     # visualizations to be saved in the "latest" folder
     except KeyboardInterrupt:
-        save_latest_model(model)
+        util.update()
+        util.save_latest_model(util.model)
         visualize_metrics(
             e,
             "latest",
@@ -200,7 +183,7 @@ def train(
             test_accuracies,
         )
 
-    save_latest_model(model)
+    util.save_latest_model(util.model)
     visualize_metrics(
         e,
         "latest",
@@ -221,39 +204,39 @@ def main() -> None:
     hydra.initialize(version_base=None, config_path="../../conf")
     cfg = hydra.compose(config_name="config.yaml")
 
-    print(f"configuration: \n {OmegaConf.to_yaml(cfg)}")
+    log.info(f"configuration: \n {OmegaConf.to_yaml(cfg)}")
 
     # initialize torch seed
     torch.manual_seed(cfg._general_.random_seed)
 
-    # load model
+    # initialize
     model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
-    model = load_model(model)
-
-    # load data
-    trainloader, testloader = load_tensors(batch_size=cfg._train_.batch_size)
 
     # define optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg._train_.learning_rate)
     criterion = nn.CrossEntropyLoss()
+
+    # initialize model helper
+    util = ModelUtils(log, model, criterion, optimizer)
+    
+    # load model
+    model = util.load_model()
+    # load data
+    util.load_tensors(batch_size=cfg._train_.batch_size)
 
     # define number of epochs and log frequency
     epochs = cfg._train_.epochs
     print_every = cfg._train_.print_every
 
     # train model
-    train(
-        model,
-        trainloader,
-        testloader,
-        criterion,
-        optimizer,
-        epochs,
-        print_every,
-    )
+    train(util, epochs, print_every)
 
 
 if __name__ == "__main__":
+    # setup logging format
+    log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    logging.basicConfig(level=logging.INFO, format=log_fmt)
+
     # append sibling dir to system path
     current_dir = os.path.dirname(os.path.abspath(__file__))
     import_dir = os.path.join(current_dir, "..", "visualization")

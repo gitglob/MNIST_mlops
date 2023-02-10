@@ -66,16 +66,16 @@ def visualize_metrics(
 
     fig, (ax1, ax2) = plt.subplots(2)
 
-    ax1.plot(train_steps, train_losses[0 : len(train_steps)], label="Train")
-    ax1.plot(test_steps, test_losses[0 : len(test_steps)], "-*", label="Validation")
+    ax1.plot(train_steps[0 : len(train_losses)], train_losses, label="Train")
+    ax1.plot(test_steps[0 : len(test_losses)], test_losses, "-*", label="Validation")
     ax1.set_ylabel("NLL Loss")
     ax1.set_title("Loss")
     ax1.legend()
 
-    ax2.plot(train_steps, train_accuracies[0 : len(train_steps)], label="Train")
+    ax2.plot(train_steps[0 : len(train_accuracies)], train_accuracies, label="Train")
     ax2.plot(
-        test_steps,
-        test_accuracies[0 : len(test_steps)],
+        test_steps[0 : len(test_accuracies)],
+        test_accuracies,
         "-*",
         label="Validation",
     )
@@ -198,7 +198,11 @@ def main(model_dir: str, data_fpath: str) -> None:
 
     # load model
     model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
-    model = load_model(model, model_dir)
+    
+    # initialize model helper
+    util = ModelUtils(log, model)
+    # load model
+    util.load_model()
 
     # load data
     data = load_data(data_fpath)
@@ -207,7 +211,7 @@ def main(model_dir: str, data_fpath: str) -> None:
 
     # extract features from the trainset
     log.info("Extracting features...")
-    features = extract_features(model, dataloader)
+    features = extract_features(util.model, dataloader)
 
     # visualize features
     log.info("Visualizing 2d features using TSNE...")
@@ -217,6 +221,10 @@ def main(model_dir: str, data_fpath: str) -> None:
 
 
 if __name__ == "__main__":
+    # setup logging format
+    log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    logging.basicConfig(level=logging.INFO, format=log_fmt)
+
     # parse arguments
     parser = argparse.ArgumentParser(
         description="Make visualization on the trained data with the trained model."
@@ -251,6 +259,6 @@ if __name__ == "__main__":
     # load functions from "models" sibling directory
     from model import MyModel
     from predict_model import data2dataloader, load_data, preprocess
-    from utils.model_utils import load_model
+    from utils.model_utils import ModelUtils
 
     main(model_dir, data_fpath)

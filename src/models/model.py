@@ -44,15 +44,15 @@ class MyModel(nn.Module):
         """
 
         super().__init__()
-        self.in_fc = nn.Linear(input_dim, 256)
-        self.fc2 = nn.Linear(256, 128)
+        self.in_fc = nn.Linear(input_dim, 512)
+        self.fc2 = nn.Linear(512, 128)
         self.fc3 = nn.Linear(128, latent_dim)
         self.out_fc = nn.Linear(latent_dim, output_dim)
 
         self.dropout = nn.Dropout(0.5)
         self.softmax = nn.Softmax()
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Does a forward pass on the NN
 
@@ -76,18 +76,18 @@ class MyModel(nn.Module):
         features = F.relu(self.fc3(x))
         x = self.dropout(features)
         # self.pshape(x)
-        x = F.log_softmax(self.out_fc(x), dim=0)
+        x = self.out_fc(x)
         # self.pshape(x)
 
         return features, x
 
     def pshape(self, x: torch.Tensor) -> None:
         """
-        log.infos the shape of the input tensor
+        prints the shape of the input tensor
 
         Parameters
         ----------
         x : torch.Tensor
             input tensor
         """
-        log.info("Shape: ", x.shape)
+        print("Shape: ", x.shape)

@@ -8,7 +8,7 @@ import torch
 from model import MyModel
 from torch import nn
 from torch.utils.data import DataLoader
-from utils.model_utils import MnistDataset, load_model
+from utils.model_utils import ModelUtils, MnistDataset
 import hydra
 import logging
 
@@ -196,7 +196,11 @@ def main(model_dir: str, data_fpath: str) -> None:
 
     # load model
     model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
-    model = load_model(model, model_dir)
+    
+    # initialize model helper
+    util = ModelUtils(log, model)
+    # load model
+    util.load_model()
 
     # load data
     data = load_data(data_fpath)
@@ -204,12 +208,16 @@ def main(model_dir: str, data_fpath: str) -> None:
     dataloader = data2dataloader(data)
 
     # predict the labels of the data
-    predict(model, dataloader)
+    predict(util.model, dataloader)
 
     return
 
 
 if __name__ == "__main__":
+    # setup logging format
+    log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    logging.basicConfig(level=logging.INFO, format=log_fmt)
+    
     # parse arguments
     parser = argparse.ArgumentParser(
         description="Predict new data with the trained model."

@@ -94,7 +94,9 @@ def load_mnist(raw_dir: str, train_version: Union[str, int] = "all") -> List[np.
     return data_out
 
 
-def normalize(image: np.ndarray, m1: int, s1: int, m2: int = 0, s2: int = 1) -> np.ndarray:
+def normalize(
+    image: np.ndarray, m1: int, s1: int, m2: int = 0, s2: int = 1
+) -> np.ndarray:
     """
     Function to normalize a given image with a specific mean and std. deviation.
     Source: https://stats.stackexchange.com/questions/46429/transform-data-to-desired-mean-and-standard-deviation
@@ -122,6 +124,7 @@ def normalize(image: np.ndarray, m1: int, s1: int, m2: int = 0, s2: int = 1) -> 
     image_norm = m2 + ((image - m1) * (s2 / s1))
 
     return image_norm
+
 
 def preprocess(data: List[np.ndarray], m2: int = 0, s2: int = 1) -> List[torch.Tensor]:
     """
@@ -165,8 +168,8 @@ def preprocess(data: List[np.ndarray], m2: int = 0, s2: int = 1) -> List[torch.T
 
     # normalize images
     log.info("Normalizing images and labels")
-    data_out = []
-    for x in [train_images, train_labels, valid_images, valid_labels]:
+    xs_norm = []
+    for x in [train_images, valid_images]:
         log.info(f"Shape of x vector (should be mx28x28): {np.shape(x)}")
 
         # extract initial mean and std. dev.
@@ -175,9 +178,7 @@ def preprocess(data: List[np.ndarray], m2: int = 0, s2: int = 1) -> List[torch.T
         log.info(f"Mean, std. dev.: {m1, s1}")
 
         # normalizer = lambda xi, mi, si: m2 + ((xi - mi) * (s2 / si))
-        x_norm = np.array(
-            [normalize(x_i, m1, s1, m2, s2) for x_i in x]
-        )
+        x_norm = np.array([normalize(x_i, m1, s1, m2, s2) for x_i in x])
 
         log.info(f"Shape of x_norm vector (should be mx28x28): {np.shape(x_norm)}")
         # extract final mean and std. dev.
@@ -185,7 +186,10 @@ def preprocess(data: List[np.ndarray], m2: int = 0, s2: int = 1) -> List[torch.T
         s2 = np.std(x_norm)
         log.info(f"New mean, std. dev.: {m2, s2}")
 
-        data_out.append(x_norm)
+        xs_norm.append(x_norm)
+
+    train_images_norm, valid_images_norm = xs_norm
+    data_out = [train_images_norm, train_labels, valid_images_norm, valid_labels]
 
     return data_out
 

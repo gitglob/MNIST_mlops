@@ -2,8 +2,10 @@
 tmp
 
 # Ignore earlier figures and models
-reports/models/v*
-reports/figures/v*
+reports/models/*
+reports/figures/*
+!reports/figures/features/latest/
+!reports/figures/metrics/latest/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
