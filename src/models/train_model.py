@@ -12,6 +12,11 @@ from utils.model_utils import (
     save_latest_model,
     save_model,
 )
+import hydra
+from omegaconf import OmegaConf
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def validation(
@@ -141,7 +146,7 @@ def train(
                     with torch.no_grad():
                         test_loss, accuracy = validation(model, testloader, criterion)
 
-                    print(
+                    log.info(
                         "Epoch: {}/{}.. ".format(e + 1, epochs),
                         "Training Loss: {:.3f}.. ".format(running_loss / print_every),
                         "Training Accuracy: {:.3f}.. ".format(
@@ -211,20 +216,30 @@ def train(
 def main() -> None:
     """Runs train and validation scripts to train a NN based on the processed MNIST data
     in data/processed in the form of tensors."""
+
+    # initialize Hydra with the path to the config.yaml file
+    hydra.initialize(version_base=None, config_path="../../conf")
+    cfg = hydra.compose(config_name="config.yaml")
+
+    print(f"configuration: \n {OmegaConf.to_yaml(cfg)}")
+
+    # initialize torch seed
+    torch.manual_seed(cfg._general_.random_seed)
+
     # load model
-    model = MyModel()
+    model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
     model = load_model(model)
 
     # load data
-    trainloader, testloader = load_tensors()
+    trainloader, testloader = load_tensors(batch_size=cfg._train_.batch_size)
 
     # define optimizer and loss function
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=cfg._train_.learning_rate)
     criterion = nn.CrossEntropyLoss()
 
     # define number of epochs and log frequency
-    epochs = 10
-    print_every = 500
+    epochs = cfg._train_.epochs
+    print_every = cfg._train_.print_every
 
     # train model
     train(

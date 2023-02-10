@@ -1,0 +1,7 @@
+defaults:
+  - data_conf
+  - general_conf
+  - model_conf
+  - training_conf
+
+name: exp_config

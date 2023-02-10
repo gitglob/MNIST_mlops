@@ -9,6 +9,10 @@ from model import MyModel
 from torch import nn
 from torch.utils.data import DataLoader
 from utils.model_utils import MnistDataset, load_model
+import hydra
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def preprocess(data: List[np.ndarray]) -> List[torch.Tensor]:
@@ -29,16 +33,18 @@ def preprocess(data: List[np.ndarray]) -> List[torch.Tensor]:
         the normalized test data [images, labels]
     """
 
-    print("\nPreprocessing data: Converting to tensor and normalizing with μ=0 and σ=1")
+    log.info(
+        "\nPreprocessing data: Converting to tensor and normalizing with μ=0 and σ=1"
+    )
 
     images, labels = data
 
     # normalize features
-    print("Preprocessing features")
+    log.info("Preprocessing features")
     # current mean and std dev
     m1 = np.mean(images, axis=(1, 2)).reshape(-1, 1)
     s1 = np.std(images, axis=(1, 2)).reshape(-1, 1)
-    # print(f"Shape of μ, σ vector (should be 5000x1): {np.shape(m1), np.shape(s1)}")
+    # log.info(f"Shape of μ, σ vector (should be 5000x1): {np.shape(m1), np.shape(s1)}")
     # desired mean and std dev
     m2 = 0
     s2 = 1
@@ -51,14 +57,14 @@ def preprocess(data: List[np.ndarray]) -> List[torch.Tensor]:
     )
     m2 = np.mean(images_norm, axis=(1, 2)).reshape(-1, 1)
     s2 = np.std(images_norm, axis=(1, 2)).reshape(-1, 1)
-    # print(f"Shape of μ, σ vector (should be 5000x1): {np.shape(m2), np.shape(s2)}")
+    # log.info(f"Shape of μ, σ vector (should be 5000x1): {np.shape(m2), np.shape(s2)}")
 
     # normalize labels
-    print("Preprocessing labels")
+    log.info("Preprocessing labels")
     # current mean and std dev
     m1 = np.mean(labels).reshape(-1, 1)
     s1 = np.std(labels).reshape(-1, 1)
-    # print(f"Shape of μ, σ vector (should be 1x1): {np.shape(m1), np.shape(s1)}")
+    # log.info(f"Shape of μ, σ vector (should be 1x1): {np.shape(m1), np.shape(s1)}")
     # desired mean and std dev
     m2 = 0
     s2 = 1
@@ -67,7 +73,7 @@ def preprocess(data: List[np.ndarray]) -> List[torch.Tensor]:
     labels_norm = labels.reshape(-1, 1)
     m2 = np.mean(labels_norm).reshape(-1, 1)
     s2 = np.std(labels_norm).reshape(-1, 1)
-    # print(f"Shape of μ, σ vector (should be 1x1): {np.shape(m2), np.shape(s2)}")
+    # log.info(f"Shape of μ, σ vector (should be 1x1): {np.shape(m2), np.shape(s2)}")
 
     data_norm = [images_norm, labels_norm]
 
@@ -89,10 +95,10 @@ def load_data(input_filepath: str) -> List[np.ndarray]:
         the test data [images, labels]
     """
 
-    print(f"\nLoading data from: {input_filepath}")
+    log.info(f"\nLoading data from: {input_filepath}")
     data = np.load(input_filepath)
     images = data["images"]
-    print(f"Shape of images: {images.shape}")
+    log.info(f"Shape of images: {images.shape}")
     labels = data["labels"]
     _ = data["allow_pickle"]
 
@@ -132,10 +138,10 @@ def predict(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader) -> 
         loss += criterion(output, labels).item()
         correct += (predicted == labels).sum().item()
 
-        # print(f"labels: {labels.T}")
-        # print(f"predictions: {predicted}")
+        # log.info(f"labels: {labels.T}")
+        # log.info(f"predictions: {predicted}")
 
-    print(f"Mean Loss: {loss/len(dataloader)} , Accuracy: {correct/len(dataloader)}")
+    log.info(f"Mean Loss: {loss/len(dataloader)} , Accuracy: {correct/len(dataloader)}")
 
 
 def data2dataloader(data: List[np.ndarray]) -> torch.utils.data.DataLoader:
@@ -181,8 +187,15 @@ def main(model_dir: str, data_fpath: str) -> None:
     -------
     None
     """
+    # initialize Hydra with the path to the config.yaml file
+    hydra.initialize(version_base=None, config_path="../../conf")
+    cfg = hydra.compose(config_name="config.yaml")
+
+    # initialize torch seed
+    torch.manual_seed(cfg._general_.random_seed)
+
     # load model
-    model = MyModel()
+    model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
     model = load_model(model, model_dir)
 
     # load data
@@ -223,5 +236,5 @@ if __name__ == "__main__":
     # not used in this stub but often useful for finding various files
     project_dir = Path(__file__).resolve().parents[2]
 
-    print("Running inference on new, untrained upon data...")
+    log.info("Running inference on new, untrained upon data...")
     main(model_dir, data_fpath)

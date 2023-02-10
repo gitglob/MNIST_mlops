@@ -8,9 +8,14 @@ import click
 import numpy as np
 import torch
 from dotenv import find_dotenv, load_dotenv
+import hydra
+from omegaconf import OmegaConf
+import logging
+
+log = logging.getLogger(__name__)
 
 
-def load_mnist(raw_dir: str, train_version: Union[str, int]="all") -> List[np.ndarray]:
+def load_mnist(raw_dir: str, train_version: Union[str, int] = "all") -> List[np.ndarray]:
     """
     Loads the train and validation MNIST data from the data/raw folder
 
@@ -19,7 +24,7 @@ def load_mnist(raw_dir: str, train_version: Union[str, int]="all") -> List[np.nd
     raw_dir : str
         the directory where the raw MNIST (.npz) data are
     train_version : Union[str, int], optional
-        the specific training dataset that the model 
+        the specific training dataset that the model
             - "first" means the first one
             - an integer specifies the version x, meaning the "train_x.npz" dataset
             - "all" means to load the data from every single file
@@ -31,14 +36,14 @@ def load_mnist(raw_dir: str, train_version: Union[str, int]="all") -> List[np.nd
         data [train_images, train_labels, validation_images, validation_labels].
     """
 
-    print(f"\nLoading MNIST data from: {raw_dir}")
+    log.info(f"\nLoading MNIST data from: {raw_dir}")
 
     # Get a list of all files in the directory
     files = os.listdir(raw_dir)
-    
+
     # Filter the list to only include files that match the pattern "train_x.npz"
     train_files = [f for f in files if f.startswith("train_") and f.endswith(".npz")]
-    
+
     # Sort the list of train files by the number x in ascending order
     train_files.sort(key=lambda x: int(x.split("_")[1].split(".")[0]))
 
@@ -50,14 +55,14 @@ def load_mnist(raw_dir: str, train_version: Union[str, int]="all") -> List[np.nd
         for train_file in train_files:
             file_path = os.path.join(raw_dir, train_file)
             data = np.load(file_path)
-            train_image_list.append(data['images'])
-            train_label_list.append(data['labels'])
-            
+            train_image_list.append(data["images"])
+            train_label_list.append(data["labels"])
+
             # Concatenate the train images and labels lists into a single numpy array
             train_images = np.concatenate(train_image_list)
             train_labels = np.concatenate(train_label_list)
     else:
-        if train_version == "first":        
+        if train_version == "first":
             # Load the first (smallest x) train file with numpy.load
             train_file = os.path.join(raw_dir, train_files[0])
         else:
@@ -72,11 +77,11 @@ def load_mnist(raw_dir: str, train_version: Union[str, int]="all") -> List[np.nd
         train_images = data["images"]
         train_labels = data["labels"]
 
-    print(f"Shape of training images: {train_images.shape}")
+    log.info(f"Shape of training images: {train_images.shape}")
 
     data = np.load(raw_dir + "/test.npz")
     validation_images = data["images"]
-    print(f"Shape of validation images: {validation_images.shape}")
+    log.info(f"Shape of validation images: {validation_images.shape}")
     validation_labels = data["labels"]
 
     data_out = [
@@ -89,14 +94,20 @@ def load_mnist(raw_dir: str, train_version: Union[str, int]="all") -> List[np.nd
     return data_out
 
 
-def normalize(image: np.ndarray, m2: int = 0, s2: int = 1) -> np.ndarray:
+def normalize(image: np.ndarray, m1: int, s1: int, m2: int = 0, s2: int = 1) -> np.ndarray:
     """
-    Function to normalize a given image with a specific mean and std. deviation
+    Function to normalize a given image with a specific mean and std. deviation.
+    Source: https://stats.stackexchange.com/questions/46429/transform-data-to-desired-mean-and-standard-deviation
+
 
     Parameters
     ----------
     image : numpy.array or PIL.image, optional
         the image to normalize
+    m1 : float
+        mean of the initial dataset pre-normalization
+    s1 : float
+        standard deviation of the initial dataset pre-normalization
     m2 : float
         desired new mean
     s2 : float
@@ -107,27 +118,25 @@ def normalize(image: np.ndarray, m2: int = 0, s2: int = 1) -> np.ndarray:
     image_norm : numpy.array or PIL.image, optional
         the input image, normalized
     """
-    # current mean and std dev
-    m1 = np.mean(image)
-    s1 = np.std(image)
 
     image_norm = m2 + ((image - m1) * (s2 / s1))
 
     return image_norm
 
-
-def preprocess(data: List[np.ndarray]) -> List[torch.Tensor]:
+def preprocess(data: List[np.ndarray], m2: int = 0, s2: int = 1) -> List[torch.Tensor]:
     """
     Convert numpy data (images) into pytorch tensors and normalizes them with a
     mean of 0 and std. deviation of 1.
-
-    Source: https://stats.stackexchange.com/questions/46429/transform-data-to-desired-mean-and-standard-deviation
 
     Parameters
     ----------
     data : list
         the MNIST data in the form of a 4d list with numpy arrays
         [train_images, train_labels, validation_images, validation_labels]
+    m2: int
+        the new desired mean for the normalized images
+    s2: int
+        the new desired std. deviation for the normalized images
 
     Returns
     -------
@@ -136,8 +145,12 @@ def preprocess(data: List[np.ndarray]) -> List[torch.Tensor]:
         tensors with mean=0 and std_dev=1
     """
 
-    print("\nPreprocessing data: Converting to tensor and normalizing with μ=0 and σ=1")
+    log.info(
+        "\nPreprocessing data: Converting to tensor and normalizing with μ=0 and σ=1"
+    )
 
+    # If we were using the mean and std. dev. of Imagenet, it would look like this:
+    # (however, this is only essential if we are using an Imagenet pretrained model)
     # transforms = T.Compose([
     #                   T.ToTensor(),
     #                   T.Normalize(
@@ -146,50 +159,33 @@ def preprocess(data: List[np.ndarray]) -> List[torch.Tensor]:
     #             ])
 
     train_images, train_labels, valid_images, valid_labels = data
+    log.info(
+        f"Shape of [train_images, train_labels, valid_images, valid_labels]: {np.shape(train_images), np.shape(train_labels), np.shape(valid_images), np.shape(valid_labels)}"
+    )
 
-    # normalize features
-    print("Preprocessing features")
-    out_images = []
-    for x in [train_images, valid_images]:
-        # current mean and std dev
-        m1 = np.mean(x, axis=(1, 2)).reshape(-1, 1)
-        s1 = np.std(x, axis=(1, 2)).reshape(-1, 1)
-        # print(f"Shape of μ, σ vector (should be 5000x1): {np.shape(m1), np.shape(s1)}")
-        # desired mean and std dev
-        m2 = 0
-        s2 = 1
+    # normalize images
+    log.info("Normalizing images and labels")
+    data_out = []
+    for x in [train_images, train_labels, valid_images, valid_labels]:
+        log.info(f"Shape of x vector (should be mx28x28): {np.shape(x)}")
 
-        normalizer = lambda xi, mi, si: m2 + ((xi - mi) * (s2 / si))
+        # extract initial mean and std. dev.
+        m1 = np.mean(x)
+        s1 = np.std(x)
+        log.info(f"Mean, std. dev.: {m1, s1}")
+
+        # normalizer = lambda xi, mi, si: m2 + ((xi - mi) * (s2 / si))
         x_norm = np.array(
-            [normalizer(x_i, m_i, s_i) for (x_i, m_i, s_i) in zip(x, m1, s1)]
+            [normalize(x_i, m1, s1, m2, s2) for x_i in x]
         )
-        m2 = np.mean(x_norm, axis=(1, 2)).reshape(-1, 1)
-        s2 = np.std(x_norm, axis=(1, 2)).reshape(-1, 1)
-        # print(f"Shape of μ, σ vector (should be 5000x1): {np.shape(m2), np.shape(s2)}")
 
-        out_images.append(x)
+        log.info(f"Shape of x_norm vector (should be mx28x28): {np.shape(x_norm)}")
+        # extract final mean and std. dev.
+        m2 = np.mean(x_norm)
+        s2 = np.std(x_norm)
+        log.info(f"New mean, std. dev.: {m2, s2}")
 
-    # normalize labels
-    print("Preprocessing labels")
-    out_labels = []
-    for x in [train_labels, valid_labels]:
-        # current mean and std dev
-        m1 = np.mean(x).reshape(-1, 1)
-        s1 = np.std(x).reshape(-1, 1)
-        # print(f"Shape of μ, σ vector (should be 1x1): {np.shape(m1), np.shape(s1)}")
-        # desired mean and std dev
-        m2 = 0
-        s2 = 1
-
-        x_norm = m2 + ((x - m1) * (s2 / s1))
-        x_norm = x.reshape(-1, 1)
-        m2 = np.mean(x_norm).reshape(-1, 1)
-        s2 = np.std(x_norm).reshape(-1, 1)
-        # print(f"Shape of μ, σ vector (should be 1x1): {np.shape(m2), np.shape(s2)}")
-
-        out_labels.append(x)
-
-    data_out = [out_images[0], out_labels[0], out_images[1], out_labels[1]]
+        data_out.append(x_norm)
 
     return data_out
 
@@ -211,7 +207,7 @@ def save_data(data: List[np.ndarray], save_dir: str) -> None:
     None
     """
 
-    print(f"\nSaving data at: {save_dir}")
+    log.info(f"\nSaving data at: {save_dir}")
 
     # if the save_dir doesn't exist, create and save it, along with an empty .gitkeep file
     if not os.path.exists(save_dir):
@@ -253,11 +249,28 @@ def main(input_datadir: str, output_datadir: str) -> None:
     -------
     None
     """
-    logger = logging.getLogger(__name__)
-    logger.info("making final data set from raw data")
+
+    # not used in this stub but often useful for finding various files
+    project_dir = Path(__file__).resolve().parents[2]
+
+    # get hydra diretories
+    conf_dir = os.path.join(project_dir, "conf")
+    conf_path = os.path.join(conf_dir, "config.yaml")
+
+    # initialize Hydra with the path to the config.yaml file
+    hydra.initialize(version_base=None, config_path="../../conf")
+    cfg = hydra.compose(
+        config_name="config.yaml"
+    )  # <class 'omegaconf.dictconfig.DictConfig'>
+    print(f"configuration: \n {OmegaConf.to_yaml(cfg)}")
+
+    # initialize torch seed
+    torch.manual_seed(cfg._general_.random_seed)
+
+    log.info("making final data set from raw data")
 
     data = load_mnist(input_datadir)
-    data = preprocess(data)
+    data = preprocess(data, cfg._data_.mean, cfg._data_.std_dev)
     save_data(data, output_datadir)
 
     return
@@ -267,9 +280,6 @@ if __name__ == "__main__":
     # setup logging format
     log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=log_fmt)
-
-    # not used in this stub but often useful for finding various files
-    project_dir = Path(__file__).resolve().parents[2]
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables

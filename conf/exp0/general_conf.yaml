@@ -1,0 +1,3 @@
+# @package _general_
+cuda: False
+random_seed: 1

@@ -71,12 +71,13 @@ def save_latest_model(model: torch.nn.Module, model_dir="models") -> None:
         latest_model_path = os.path.join(model_dir, "latest")
         if not os.path.exists(latest_model_path):
             os.makedirs(latest_model_path)
-        print(f"Saving LATEST model in directory: {latest_model_path}/model.pth")
+        log.info(f"Saving LATEST model in directory: {latest_model_path}/model.pth")
         torch.save(model.state_dict(), latest_model_path + "/model.pth")
 
 
 def load_tensors(
-    data_dir="data/processed",
+    data_dir: str = "data/processed",
+    batch_size: int = 32,
 ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
     Loads the saved tensors in data/processed.
@@ -85,6 +86,8 @@ def load_tensors(
     ----------
     data_dir : str, optional
         directory with the processed (.py) MNIST data
+    batch_size: int, optional
+        size of batches
 
     Returns
     -------
@@ -93,7 +96,7 @@ def load_tensors(
     """
 
     # alternative to move to the preset directory
-    print(f"Loading data from: {data_dir}")
+    log.info(f"Loading data from: {data_dir}")
 
     train_images = torch.load(data_dir + "/train_images.pt")
     train_labels = torch.load(data_dir + "/train_labels.pt")
@@ -105,8 +108,12 @@ def load_tensors(
     valid_dataset = MnistDataset(valid_images, valid_labels)
 
     # Create the DataLoader
-    trainloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=2)
-    validloader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=2)
+    trainloader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=2
+    )
+    validloader = DataLoader(
+        valid_dataset, batch_size=batch_size, shuffle=False, num_workers=2
+    )
 
     return trainloader, validloader
 
@@ -133,7 +140,7 @@ def save_model(model: torch.nn.Module, version: int, model_dir="models") -> None
     if not os.path.exists(version_dir):
         os.makedirs(version_dir)
     model_path = os.path.join(version_dir, "model.pth")
-    print(f"Saving model in directory: {model_path}")
+    log.info(f"Saving model in directory: {model_path}")
     torch.save(model.state_dict(), model_path)
 
 
@@ -153,28 +160,28 @@ def load_model(model, model_dir="models"):
     model : torch.nn.Module
         the latest version of the pretrained network
     """
-    print(f"Loading model from directory: {model_dir}")
+    log.info(f"Loading model from directory: {model_dir}")
 
     version = get_latest_version(model_dir)
     latest_dir = model_dir + "/latest"
     if os.path.exists(latest_dir):
-        print(f"Loading the latest model. This is likely version: v{version}")
+        log.info(f"Loading the latest model. This is likely version: v{version}")
         model_path = os.path.join(model_dir, "latest", "model.pth")
         model.load_state_dict(torch.load(model_path))
     else:
-        print("Loading the newest version, the <latest> subfolder does not exist!")
+        log.info("Loading the newest version, the <latest> subfolder does not exist!")
         if version > -1:
             model_path = os.path.join(model_dir, "v{}".format(version), "model.pth")
             if os.path.exists(model_path):
                 model.load_state_dict(torch.load(model_path))
             else:
-                print(
+                log.info(
                     "Warning: model version v{} does not exist. Unable to load model.".format(
                         version
                     )
                 )
         else:
-            print(
+            log.info(
                 "Warning: no previous version of the model exists. Creating an empty (v0) model..."
             )
 

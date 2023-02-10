@@ -3,6 +3,9 @@ from typing import Tuple
 import torch
 import torch.nn.functional as F
 from torch import nn
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class MyModel(nn.Module):
@@ -23,17 +26,28 @@ class MyModel(nn.Module):
     Methods
     -------
     info(additional=""):
-        Prints the person's name and age.
+        log.infos the person's name and age.
     """
 
-    def __init__(self):
-        """Constructs all the layers of the NN."""
+    def __init__(self, input_dim, latent_dim, output_dim):
+        """
+        Constructs all the layers of the NN.
+
+        Parameters
+        ----------
+        input_dim : int
+            size of input dimension
+        latent_dim : int
+            size of latent dimension (latent features)
+        output_dim : int
+            size of output dimension
+        """
 
         super().__init__()
-        self.in_fc = nn.Linear(784, 256)
+        self.in_fc = nn.Linear(input_dim, 256)
         self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, 64)
-        self.out_fc = nn.Linear(64, 10)
+        self.fc3 = nn.Linear(128, latent_dim)
+        self.out_fc = nn.Linear(latent_dim, output_dim)
 
         self.dropout = nn.Dropout(0.5)
         self.softmax = nn.Softmax()
@@ -69,11 +83,11 @@ class MyModel(nn.Module):
 
     def pshape(self, x: torch.Tensor) -> None:
         """
-        Prints the shape of the input tensor
+        log.infos the shape of the input tensor
 
         Parameters
         ----------
         x : torch.Tensor
             input tensor
         """
-        print("Shape: ", x.shape)
+        log.info("Shape: ", x.shape)

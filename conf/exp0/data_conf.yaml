@@ -1,0 +1,7 @@
+# @package _data_
+dataset_path: '~/datasets'
+mean: 0
+std_dev: 1
+image_c: 1
+image_w: 28
+image_h: 28

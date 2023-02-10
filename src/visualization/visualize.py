@@ -8,6 +8,10 @@ import numpy as np
 import torch
 from sklearn.manifold import TSNE
 from typing import List
+import hydra
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def visualize_metrics(
@@ -87,9 +91,9 @@ def visualize_metrics(
         os.makedirs(vis_version_dir)
     figdir = vis_version_dir + "/metrics.png"
     if version != "latest":
-        print(f"Saving figure in: {figdir}")
+        log.info(f"Saving figure in: {figdir}")
     else:
-        print(f"Saving LATEST figure in: {figdir}")
+        log.info(f"Saving LATEST figure in: {figdir}")
     plt.savefig(figdir)
     plt.close()
 
@@ -124,7 +128,7 @@ def visualize_features(
     if not os.path.exists(vis_version_dir):
         os.makedirs(vis_version_dir)
     figdir = vis_version_dir + "/features.png"
-    print(f"Saving LATEST figure in: {figdir}")
+    log.info(f"Saving LATEST figure in: {figdir}")
     plt.savefig(figdir)
     plt.close()
 
@@ -185,8 +189,15 @@ def main(model_dir: str, data_fpath: str) -> None:
     -------
     None
     """
+    # initialize Hydra with the path to the config.yaml file
+    hydra.initialize(version_base=None, config_path="../../conf")
+    cfg = hydra.compose(config_name="config.yaml")
+
+    # initialize torch seed
+    torch.manual_seed(cfg._general_.random_seed)
+
     # load model
-    model = MyModel()
+    model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
     model = load_model(model, model_dir)
 
     # load data
@@ -195,11 +206,11 @@ def main(model_dir: str, data_fpath: str) -> None:
     dataloader = data2dataloader(data)
 
     # extract features from the trainset
-    print("Extracting features...")
+    log.info("Extracting features...")
     features = extract_features(model, dataloader)
 
     # visualize features
-    print("Visualizing 2d features using TSNE...")
+    log.info("Visualizing 2d features using TSNE...")
     visualize_features(features)
 
     return

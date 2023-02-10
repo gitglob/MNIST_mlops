@@ -1,0 +1,4 @@
+# @package _group_
+x_dim: 784
+hidden_dim: 200
+latent_dim: 10
