@@ -6,15 +6,30 @@ import torch
 from model import MyModel
 from torch import nn
 from pathlib import Path
+import wandb
 
 import hydra
 from omegaconf import OmegaConf
+from utils.model_utils import ModelUtils
 import logging
 from logging.handlers import RotatingFileHandler
 
 log = logging.getLogger(__name__)
 
-from utils.model_utils import ModelUtils
+# Define sweep config
+sweep_configuration = {
+    "method": "random",
+    "name": "sweep",
+    "metric": {"goal": "maximize", "name": "val_acc"},
+    "parameters": {
+        "batch_size": {"values": [20, 100, 500]},
+        "epochs": {"values": [5, 10, 15]},
+        "lr": {"max": 0.1, "min": 0.0001},
+    },
+}
+
+# Initialize sweep by passing in config. (Optional) Provide a name of the project.
+sweep_id = wandb.sweep(sweep=sweep_configuration, project='my-first-sweep')
 
 
 def validation(util) -> Tuple[float, float]:
@@ -77,14 +92,14 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
     # train the network
     step = 0
     train_steps = []
-    test_steps = []
+    validation_steps = []
     running_loss = 0
     running_correct = 0
     running_tot = 0
     train_losses = []
     train_accuracies = []
-    test_losses = []
-    test_accuracies = []
+    validation_losses = []
+    validation_accuracies = []
     try:
         for e in range(epochs):
             # util.Model in training mode, dropout is on
@@ -119,28 +134,36 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
 
                 if step % print_every == 0:
                     log.info("\n")
-                    test_steps.append(step)
+                    validation_steps.append(step)
 
                     # util.Model in inference mode, dropout is off
                     util.model.eval()
 
                     # Turn off gradients for validation, will speed up inference
                     with torch.no_grad():
-                        test_loss, accuracy = validation(util)
+                        validation_loss, accuracy = validation(util)
 
-                    print(
+                    util.log.info(
                         "Epoch: {}/{}.. ".format(e + 1, epochs),
                         "Training Loss: {:.3f}.. ".format(running_loss / print_every),
                         "Training Accuracy: {:.3f}.. ".format(
                             running_correct / running_tot
                         ),
-                        "Test Loss: {:.3f}.. ".format(test_loss / len(util.validloader)),
+                        "Test Loss: {:.3f}.. ".format(validation_loss / len(util.validloader)),
                         "Test Accuracy: {:.3f}".format(accuracy / len(util.validloader)),
                     )
 
+                    # log with wandb
+                    wandb.log({
+                        'train_acc': running_correct / running_tot,
+                        'train_loss': running_loss / print_every, 
+                        'val_acc': accuracy / len(util.validloader), 
+                        'val_loss': validation_loss / len(util.validloader)
+                    })
+
                     # log current loss and accuracy
-                    test_losses.append(test_loss / print_every)
-                    test_accuracies.append(accuracy / len(util.validloader))
+                    validation_losses.append(validation_loss / print_every)
+                    validation_accuracies.append(accuracy / len(util.validloader))
 
                     # update the latest version
                     util.update()
@@ -152,11 +175,11 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
                         e,
                         "latest",
                         train_steps,
-                        test_steps,
+                        validation_steps,
                         train_losses,
                         train_accuracies,
-                        test_losses,
-                        test_accuracies,
+                        validation_losses,
+                        validation_accuracies,
                     )
 
                     # set running training loss and number of correct predictions to 0
@@ -173,35 +196,38 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
     # visualizations to be saved in the "latest" folder
     except KeyboardInterrupt:
         util.update()
-        util.save_latest_model()
+        util.save_lavalidation_model()
         visualize_metrics(
             e,
             "latest",
             train_steps,
-            test_steps,
+            validation_steps,
             train_losses,
             train_accuracies,
-            test_losses,
-            test_accuracies,
+            validation_losses,
+            validation_accuracies,
         )
 
-    util.save_latest_model()
+    util.save_lavalidation_model()
     visualize_metrics(
         e,
         "latest",
         train_steps,
-        test_steps,
+        validation_steps,
         train_losses,
         train_accuracies,
-        test_losses,
-        test_accuracies,
+        validation_losses,
+        validation_accuracies,
     )
 
-@hydra.main(config_path="../../conf", config_name='config.yaml')
+
+@hydra.main(config_path="../../conf", config_name="config.yaml")
 def main(cfg) -> None:
     """Runs train and validation scripts to train a NN based on the processed MNIST data
     in data/processed in the form of tensors."""
-    
+    # initialize wandb
+    run = wandb.init(project="MNIST_fashion")
+
     # set as working directory the MNIST_mlops folder
     project_dir = Path(__file__).resolve().parents[2]
     os.chdir(project_dir)
@@ -220,13 +246,16 @@ def main(cfg) -> None:
     util = ModelUtils(log, model, criterion, optimizer)
 
     # load model
-    model = util.load_model()
+    util.load_model()
     # load data
     util.load_tensors(batch_size=cfg._train_.batch_size)
 
     # define number of epochs and log frequency
     epochs = cfg._train_.epochs
     print_every = cfg._train_.print_every
+
+    # Magic
+    wandb.watch(util.model, log_freq=100)
 
     # train model
     train(util, epochs, print_every)
@@ -245,3 +274,6 @@ if __name__ == "__main__":
     from visualize import visualize_metrics
 
     main()
+    
+    # Start sweep job.
+    wandb.agent(sweep_id, function=main, count=4)

@@ -10,6 +10,9 @@ from sklearn.manifold import TSNE
 from typing import List
 import hydra
 import logging
+import wandb
+import io
+from PIL import Image
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +98,21 @@ def visualize_metrics(
     else:
         log.info(f"Saving LATEST figure in: {figdir}")
     plt.savefig(figdir)
+
+    # Save the figure to a buffer instead of a file
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+
+    # Open the image from the buffer using PIL
+    image = Image.open(buf)
+
+    # Convert the image to an RGB numpy array
+    image_array = np.array(image.convert("RGB"))
+
+    # Log the image using wandb
+    wandb.log({"metrics": wandb.Image(image_array)})
+
     plt.close()
 
 
