@@ -8,6 +8,9 @@ reports/figures/*
 !reports/figures/features/latest/
 !reports/figures/metrics/latest/
 
+# ignore hydra logs
+outputs/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

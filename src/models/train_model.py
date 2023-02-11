@@ -5,10 +5,12 @@ from typing import Callable, Optional, Tuple, Union
 import torch
 from model import MyModel
 from torch import nn
+from pathlib import Path
 
 import hydra
 from omegaconf import OmegaConf
 import logging
+from logging.handlers import RotatingFileHandler
 
 log = logging.getLogger(__name__)
 
@@ -195,16 +197,14 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
         test_accuracies,
     )
 
-
-def main() -> None:
+@hydra.main(config_path="../../conf", config_name='config.yaml')
+def main(cfg) -> None:
     """Runs train and validation scripts to train a NN based on the processed MNIST data
     in data/processed in the form of tensors."""
-
-    # initialize Hydra with the path to the config.yaml file
-    hydra.initialize(version_base=None, config_path="../../conf")
-    cfg = hydra.compose(config_name="config.yaml")
-
-    log.info(f"configuration: \n {OmegaConf.to_yaml(cfg)}")
+    
+    # set as working directory the MNIST_mlops folder
+    project_dir = Path(__file__).resolve().parents[2]
+    os.chdir(project_dir)
 
     # initialize torch seed
     torch.manual_seed(cfg._general_.random_seed)

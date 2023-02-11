@@ -1,2 +1,3 @@
+# change exp0 to exp{int} if you want to run a new experiment
 defaults:
   - exp0: exp_config
