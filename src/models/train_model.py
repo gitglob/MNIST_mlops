@@ -143,7 +143,7 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
                     with torch.no_grad():
                         validation_loss, accuracy = validation(util)
 
-                    util.log.info(
+                    print(
                         "Epoch: {}/{}.. ".format(e + 1, epochs),
                         "Training Loss: {:.3f}.. ".format(running_loss / print_every),
                         "Training Accuracy: {:.3f}.. ".format(
@@ -208,7 +208,7 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
             validation_accuracies,
         )
 
-    util.save_lavalidation_model()
+    util.save_validation_model()
     visualize_metrics(
         e,
         "latest",
@@ -228,18 +228,28 @@ def main(cfg) -> None:
     # initialize wandb
     run = wandb.init(project="MNIST_fashion")
 
+    # extract configuration
+    random_seed = cfg._general_.random_seed
+    input_dim = cfg._model_.input_dim
+    latent_dim = cfg._model_.latent_dim
+    output_dim = cfg._model_.output_dim
+    lr=cfg._train_.learning_rate
+    bs=cfg._train_.batch_size
+    epochs = cfg._train_.epochs
+    print_every = cfg._train_.print_every
+
     # set as working directory the MNIST_mlops folder
     project_dir = Path(__file__).resolve().parents[2]
     os.chdir(project_dir)
 
     # initialize torch seed
-    torch.manual_seed(cfg._general_.random_seed)
+    torch.manual_seed(random_seed)
 
     # initialize
-    model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
+    model = MyModel(input_dim, latent_dim, output_dim)
 
     # define optimizer and loss function
-    optimizer = torch.optim.Adam(model.parameters(), lr=cfg._train_.learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss()
 
     # initialize model helper
@@ -248,11 +258,7 @@ def main(cfg) -> None:
     # load model
     util.load_model()
     # load data
-    util.load_tensors(batch_size=cfg._train_.batch_size)
-
-    # define number of epochs and log frequency
-    epochs = cfg._train_.epochs
-    print_every = cfg._train_.print_every
+    util.load_tensors(batch_size=bs)
 
     # Magic
     wandb.watch(util.model, log_freq=100)
