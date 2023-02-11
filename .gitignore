@@ -3,6 +3,7 @@ tmp
 
 # Ignore earlier figures and models
 models/*
+!models/.gitkeep
 reports/models/*
 reports/figures/*
 !reports/figures/features/latest/
@@ -10,6 +11,7 @@ reports/figures/*
 
 # ignore hydra logs
 outputs/*
+!outputs/.gitkeep
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
