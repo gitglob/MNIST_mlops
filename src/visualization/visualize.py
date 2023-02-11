@@ -198,7 +198,7 @@ def main(model_dir: str, data_fpath: str) -> None:
 
     # load model
     model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
-    
+
     # initialize model helper
     util = ModelUtils(log, model)
     # load model

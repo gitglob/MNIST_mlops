@@ -8,18 +8,30 @@ from torch.utils.data import DataLoader, Dataset
 class MnistDataset(Dataset):
     """
     Dataloader for the MNIST dataset based on numpy arrays.
+
+    Attributes
+    ----------
+    images: torch.tensor
+        the dataset images
+    labels: torch.tensor
+        the dataset labels
+    ineference : bool
+        indicates if there is are labels for the current dataset.
     """
 
     def __init__(self, images, labels=None, inference=False):
+        """Initializes images, labels and inference flag."""
         self.inference = inference
         self.images = torch.from_numpy(images).float()
         if not inference:
             self.labels = torch.from_numpy(labels).long()
 
     def __len__(self):
+        """Gets the size of the dataset."""
         return len(self.labels)
 
     def __getitem__(self, idx):
+        """Gets the image with the specified id."""
         if not self.inference:
             return self.images[idx], self.labels[idx]
         else:
@@ -27,11 +39,72 @@ class MnistDataset(Dataset):
 
 
 class ModelUtils:
+    """
+    Saves and handles all the information regarding the model during the training process.
+
+    Attributes
+    ----------
+    log : Logging.Logger
+        logger
+    generation : int
+        generation of the model g{generation}
+    version : int
+        version of the model v{version}
+    model : torch.nn.Module
+        pretrained model
+    models_dir : str
+        directory with the pretrained, saved models
+    gen_dir : str
+        directory with generation of the current model
+    version_dir : str
+        directory with the version of the current model
+    latest_dir : str
+        directory with the folder "latest" that contains the latest version of the
+        current model
+    model_path : str
+        path of the current model ("model.pth")
+    criterion: Union[Callable, nn.Module],
+        loss function that was used to train the current model
+    optimizer: torch.optim.Optimizer
+        optimizer that was used to train the current model
+    gen_match_flag : bool
+        indicates of the current model architecture has been used before and there is
+        a matching generation architecture
+    previous_version_flag : bool
+        indicates if the current model has been trained before and there is a previous
+        version that training will start from
+
+    Methods
+    -------
+    init() -> None:
+        Initializes the model generation and version.
+    update() -> None:
+        Updates the model version.
+    get_maching_gen(gen_model_summaries: List[List[Union[torch.nn.Module, int]]]) -> None:
+        Gets the matching model generation.
+    parse_gen_models() -> List[List[str, str]]:
+        Loads all the model generations.
+    get_latest_version() -> None:
+        Gets the latest version of the specific generation model.
+    load_tensors(
+                data_dir: str = "data/processed",
+                batch_size: int = 32,
+                ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+        Loads the saved tensors in data/processed.
+    load_model() -> None:
+        Loads the last saved version of the model if there is one.
+    save_model() -> None:
+        Saves the model state_dict, script and summary.
+    save_latest_model(model: torch.nn.Module, model_dir="models") -> None:
+        Saves the latest model in "models/g{x}/latest/model.pth".
+
+    """
+
     def __init__(self, log, model, criterion=None, optimizer=None, models_dir="models"):
         self.log = log
 
-        self.version = None
         self.generation = None
+        self.version = None
 
         self.model = model
         self.models_dir = models_dir
@@ -56,11 +129,11 @@ class ModelUtils:
         Initializes the generation and version directories.
         """
         # "generation"
-        gen_folders_flag, gen_model_summaries = self.parse_gen_models()
+        gen_model_summaries = self.parse_gen_models()
         self.get_maching_gen(gen_model_summaries)
         if not self.gen_match_flag:
             self.log.info(f"New model generation!")
-        
+
         self.gen_dir = os.path.join(self.models_dir, "g{}".format(self.generation))
         self.log.info(f"Generation directory: {self.gen_dir}")
 
@@ -91,11 +164,6 @@ class ModelUtils:
         self.model_path = os.path.join(self.version_dir, "model.pth")
         self.log.info(f"Model path: {self.model_path}")
 
-    def read_summary(self, file_path):
-        with open(file_path, "r") as file:
-            summary = file.read()
-        return summary
-
     def get_maching_gen(
         self, gen_model_summaries: List[List[Union[torch.nn.Module, int]]]
     ):
@@ -125,7 +193,7 @@ class ModelUtils:
             self.log.warn(f"No other generations at all!! This becomes g0!")
         else:
             # iterate over the existing generations and check if one of the existing generations matches our current model
-            for (i, gen_summary) in enumerate(gen_summaries):
+            for i, gen_summary in enumerate(gen_summaries):
                 if gen_summary == str(self.model):
                     self.generation = gen_ids[i]
                     self.log.info(f"Matching generation: {self.generation}")
@@ -134,9 +202,11 @@ class ModelUtils:
 
             if not self.gen_match_flag:
                 self.generation = max(gen_ids) + 1
-                self.log.warn(f"No matching generation! New generation: {self.generation}")
+                self.log.warn(
+                    f"No matching generation! New generation: {self.generation}"
+                )
 
-    def parse_gen_models(self):
+    def parse_gen_models(self) -> List[List[str]]:
         """
         Loads all the model generations.
 
@@ -152,39 +222,31 @@ class ModelUtils:
             i.e. [[model_summary, g1], [model_summary, g5]]
         """
 
-        gen_folders_flag = True
         gen_model_summaries = []
         gs = [
             f
             for f in os.listdir(self.models_dir)
             if f.startswith("g") and os.path.isdir(os.path.join(self.models_dir, f))
         ]
-        if not gs:
-            gen_folders_flag = False
         for g in gs:
             subfolder_path = os.path.join(self.models_dir, g)
             gen_summary_path = os.path.join(subfolder_path, "model_summary.txt")
             if not os.path.exists(gen_summary_path):
                 continue
-            model_summary = self.read_summary(gen_summary_path)
+            with open(gen_summary_path, "r") as file:
+                model_summary = file.read()
             gen_model_summaries.append([model_summary, g])
 
-        return gen_folders_flag, gen_model_summaries
+        return gen_model_summaries
 
-    def get_latest_version(self) -> int:
+    def get_latest_version(self) -> None:
         """
         Gets the latest version of the specific generation model.
-        If no previous version exists, it returns -1.
-
-        Parameters
-        ----------
-        gen_dir : str, optional
-            directory with the pretrained, saved models of this generation
+        If no previous version exists, it makes self.version 0.
 
         Returns
         -------
-        version : int
-            version of the trained model (-1 means that no pretrained model exists)
+        None
         """
 
         versions = []
@@ -203,12 +265,11 @@ class ModelUtils:
             self.log.warn(f"No previous generations & versions. This becomes g0/v0!")
             self.version = 0
 
-
     def load_tensors(
         self,
         data_dir: str = "data/processed",
         batch_size: int = 32,
-    ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    ) -> None:
         """
         Loads the saved tensors in data/processed.
 
@@ -221,8 +282,7 @@ class ModelUtils:
 
         Returns
         -------
-        (trainloader, validloader) : tuple
-            dataloaders for the training and validation MNIST dataset
+        None
         """
 
         # alternative to move to the preset directory
@@ -245,23 +305,14 @@ class ModelUtils:
             valid_dataset, batch_size=batch_size, shuffle=False, num_workers=2
         )
 
-    def load_model(self):
+    def load_model(self) -> None:
         """
-        Loads the last saved version of the model, or if there is none, does nothing.
-
-        Parameters
-        ----------
-        model : torch.nn.Module
-            an instance of the pretrained model
-        gen : int
-            the generation of the model
-        model_dir : str, optional
-            directory with the pretrained, saved models
+        Loads the last saved version of the model if there is one.
+        If not, it does nothing.
 
         Returns
         -------
-        model : torch.nn.Module
-            the latest version of the pretrained network
+        None
         """
 
         self.log.info(f"Loading model from directory: {self.model_path}")
@@ -285,18 +336,11 @@ class ModelUtils:
 
     def save_model(self) -> None:
         """
-        Saves the model in a subfolder in the "models" folder that is named after the
-        generation and version of the model (i.e. g1/v1, g1/v2, g3/v6 etc...).
-        It also saves a file with the information about the model archtecture.
-
-        Parameters
-        ----------
-        model : torch.nn.Module
-            the pretrained network
-        version : int
-            the version of the pretrained model
-        self.models_dir : str, optional
-            directory with the pretrained, saved models
+        Saves 3 things:
+        - the model.state_dict() in a subfolder in the "models" folder that is named after
+        the generation and version of the model (i.e. g1/v1, g1/v2, g3/v6 etc...)
+        - the model script (models/g{x}/model_scripted.pt)
+        - the model summary (models/g{x}/model_summary.txt)
 
         Returns
         -------
@@ -323,16 +367,9 @@ class ModelUtils:
                 # Write model architecture
                 f.write(str(self.model))
 
-    def save_latest_model(self, model: torch.nn.Module, model_dir="models") -> None:
+    def save_latest_model(self) -> None:
         """
-        Saves the latest model in the "latest" fubfolder in the "models/gx/" folder
-
-        Parameters
-        ----------
-        model : torch.nn.Module
-            the pretrained network
-        model_dir : str, optional
-            directory with the pretrained, saved models
+        Saves the latest model in "models/g{x}/latest/model.pth".
 
         Returns
         -------
@@ -341,7 +378,5 @@ class ModelUtils:
 
         if not os.path.exists(self.latest_dir):
             os.makedirs(self.latest_dir)
-        self.log.info(
-            f"Saving LATEST model in directory: {self.latest_dir}/model.pth"
-        )
+        self.log.info(f"Saving LATEST model in directory: {self.latest_dir}/model.pth")
         torch.save(self.model.state_dict(), self.latest_dir + "/model.pth")

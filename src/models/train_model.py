@@ -171,7 +171,7 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
     # visualizations to be saved in the "latest" folder
     except KeyboardInterrupt:
         util.update()
-        util.save_latest_model(util.model)
+        util.save_latest_model()
         visualize_metrics(
             e,
             "latest",
@@ -183,7 +183,7 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
             test_accuracies,
         )
 
-    util.save_latest_model(util.model)
+    util.save_latest_model()
     visualize_metrics(
         e,
         "latest",
@@ -218,7 +218,7 @@ def main() -> None:
 
     # initialize model helper
     util = ModelUtils(log, model, criterion, optimizer)
-    
+
     # load model
     model = util.load_model()
     # load data

@@ -2,6 +2,7 @@
 tmp
 
 # Ignore earlier figures and models
+models/*
 reports/models/*
 reports/figures/*
 !reports/figures/features/latest/

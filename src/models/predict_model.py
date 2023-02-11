@@ -196,7 +196,7 @@ def main(model_dir: str, data_fpath: str) -> None:
 
     # load model
     model = MyModel(cfg._model_.input_dim, cfg._model_.latent_dim, cfg._model_.output_dim)
-    
+
     # initialize model helper
     util = ModelUtils(log, model)
     # load model
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     # setup logging format
     log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=log_fmt)
-    
+
     # parse arguments
     parser = argparse.ArgumentParser(
         description="Predict new data with the trained model."
