@@ -256,7 +256,7 @@ class ModelUtils:
                     self.previous_version_flag = True
                     curr_version = int(folder[1:])
                     versions.append(curr_version)
-                self.version = max(versions)
+                    self.version = max(versions)
 
             if not self.previous_version_flag:
                 self.log.warn(f"No previous versions. This becomes v0!")

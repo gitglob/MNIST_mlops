@@ -1,0 +1,4 @@
+# @package _wandb_
+entity: panos
+project: MNIST_fashion
+mode: online

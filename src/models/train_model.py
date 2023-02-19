@@ -16,22 +16,6 @@ from logging.handlers import RotatingFileHandler
 
 log = logging.getLogger(__name__)
 
-# Define sweep config
-sweep_configuration = {
-    "method": "random",
-    "name": "sweep",
-    "metric": {"goal": "maximize", "name": "val_acc"},
-    "parameters": {
-        "batch_size": {"values": [20, 100, 500]},
-        "epochs": {"values": [5, 10, 15]},
-        "lr": {"max": 0.1, "min": 0.0001},
-    },
-}
-
-# Initialize sweep by passing in config. (Optional) Provide a name of the project.
-sweep_id = wandb.sweep(sweep=sweep_configuration, project='my-first-sweep')
-
-
 def validation(util) -> Tuple[float, float]:
     """
     Validated the training process n the validation set.
@@ -196,7 +180,7 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
     # visualizations to be saved in the "latest" folder
     except KeyboardInterrupt:
         util.update()
-        util.save_lavalidation_model()
+        util.save_latest_model()
         visualize_metrics(
             e,
             "latest",
@@ -208,7 +192,7 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
             validation_accuracies,
         )
 
-    util.save_validation_model()
+    util.save_latest_model()
     visualize_metrics(
         e,
         "latest",
@@ -221,21 +205,27 @@ def train(util: ModelUtils, epochs: int = 5, print_every: int = 40) -> None:
     )
 
 
-@hydra.main(config_path="../../conf", config_name="config.yaml")
+@hydra.main(version_base=None, config_path="../../conf", config_name="config.yaml")
 def main(cfg) -> None:
     """Runs train and validation scripts to train a NN based on the processed MNIST data
     in data/processed in the form of tensors."""
     # initialize wandb
-    run = wandb.init(project="MNIST_fashion")
+    wandb.init(entity=cfg._wandb_.entity, project=cfg._wandb_.project)
 
-    # extract configuration
+    # Option #1: use wandb's sweep.yaml configurations
+    # Access the hyperparameters
+    lr = wandb.config.learning_rate
+    batch_size = wandb.config.batch_size
+    epochs = wandb.config.epochs
+
+    # Option #2: extract hydra configuration
     random_seed = cfg._general_.random_seed
     input_dim = cfg._model_.input_dim
     latent_dim = cfg._model_.latent_dim
     output_dim = cfg._model_.output_dim
-    lr=cfg._train_.learning_rate
-    bs=cfg._train_.batch_size
-    epochs = cfg._train_.epochs
+    # lr=cfg._train_.learning_rate
+    # batch_size=cfg._train_.batch_size
+    # epochs = cfg._train_.epochs
     print_every = cfg._train_.print_every
 
     # set as working directory the MNIST_mlops folder
@@ -258,7 +248,7 @@ def main(cfg) -> None:
     # load model
     util.load_model()
     # load data
-    util.load_tensors(batch_size=bs)
+    util.load_tensors(batch_size=batch_size)
 
     # Magic
     wandb.watch(util.model, log_freq=100)
@@ -280,6 +270,3 @@ if __name__ == "__main__":
     from visualize import visualize_metrics
 
     main()
-    
-    # Start sweep job.
-    wandb.agent(sweep_id, function=main, count=4)
