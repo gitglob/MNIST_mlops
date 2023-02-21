@@ -20,6 +20,13 @@ jobs:
       with:
         python-version: 3.8
 
+    - uses: iterative/setup-dvc@v1
+
+    - name: Get data
+      run: dvc pull
+      env:
+        GDRIVE_CREDENTIALS_DATA: $
+        
     - name: Get pip cache dir
       id: pip-cache
       run: |
@@ -38,7 +45,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements_tests.txt
-        
+
     - name: Test with pytest
       run: |
         pip install pytest
