@@ -1,18 +1,19 @@
 import argparse
+import io
+import logging
 import os
 import sys
 from pathlib import Path
+from typing import List
 
+import hydra
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from sklearn.manifold import TSNE
-from typing import List
-import hydra
-import logging
-import wandb
-import io
 from PIL import Image
+from sklearn.manifold import TSNE
+
+import wandb
 
 log = logging.getLogger(__name__)
 

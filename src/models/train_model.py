@@ -1,17 +1,15 @@
+import logging
 import os
 import sys
+from pathlib import Path
 from typing import Callable, Optional, Tuple, Union
 
+import hydra
+import pytorch_lightning as pl
 import torch
 from model import MyModel
-from pathlib import Path
-
-import hydra
-import logging
-
-import pytorch_lightning as pl
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 log = logging.getLogger(__name__)
 

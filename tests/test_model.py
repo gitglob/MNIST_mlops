@@ -1,6 +1,8 @@
 import sys
+
 import pytest
 from torch import rand, randn
+
 from tests import _PATH_SRC_MODELS
 
 sys.path.append(_PATH_SRC_MODELS)

@@ -1,8 +1,9 @@
-import sys
 import os
-import numpy as np
+import sys
+
 import pytest
-from tests import _PATH_SRC_DATA, _PATH_DATA
+
+from tests import _PATH_DATA, _PATH_SRC_DATA
 
 sys.path.append(_PATH_SRC_DATA)
 from make_dataset import load_mnist
@@ -21,6 +22,7 @@ for fpath in data_fpaths:
     if not os.path.exists(fpath):
         missing_data_flag = True
         break
+
 
 # skip the test if the data is not present
 @pytest.mark.skipif(missing_data_flag, reason="Data files not found")

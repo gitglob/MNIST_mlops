@@ -1,9 +1,9 @@
-import pytorch_lightning as pl
-from torch.utils.data import random_split, DataLoader, Dataset
-from numpy import load
-from torchvision import transforms
-
 import logging
+
+import pytorch_lightning as pl
+from numpy import load
+from torch.utils.data import DataLoader, Dataset, random_split
+from torchvision import transforms
 
 log = logging.getLogger(__name__)
 

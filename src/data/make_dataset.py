@@ -5,12 +5,11 @@ from pathlib import Path
 from typing import List, Union
 
 import click
+import hydra
 import numpy as np
 import torch
 from dotenv import find_dotenv, load_dotenv
-import hydra
 from omegaconf import OmegaConf
-import logging
 
 log = logging.getLogger(__name__)
 

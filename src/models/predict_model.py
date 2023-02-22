@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 import argparse
+import logging
 from pathlib import Path
 from typing import List
 
+import hydra
 import numpy as np
 import torch
 from model import MyModel
 from torch import nn
 from torch.utils.data import DataLoader
-from utils.model_utils import ModelUtils, MnistDataset
-import hydra
-import logging
+from utils.model_utils import MnistDataset, ModelUtils
 
 log = logging.getLogger(__name__)
 

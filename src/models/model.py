@@ -1,11 +1,10 @@
 from typing import Tuple
-from torch import Tensor
 
+import numpy as np
 from pytorch_lightning import LightningModule
-from torch import nn, optim
+from torch import Tensor, nn, optim
 
 import wandb
-import numpy as np
 
 
 class MyModel(LightningModule):
