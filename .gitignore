@@ -13,6 +13,14 @@ reports/figures/*
 outputs/*
 !outputs/.gitkeep
 
+# ignore wandb logs
+wandb/*
+!wandb/.gitkeep
+
+# ignore pytorch lightning logs
+lightning_logs/*
+!lightning_logs/.gitkeep
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

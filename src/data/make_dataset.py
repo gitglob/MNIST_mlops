@@ -5,12 +5,11 @@ from pathlib import Path
 from typing import List, Union
 
 import click
+import hydra
 import numpy as np
 import torch
 from dotenv import find_dotenv, load_dotenv
-import hydra
 from omegaconf import OmegaConf
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ def load_mnist(raw_dir: str, train_version: Union[str, int] = "all") -> List[np.
     -------
     data_out : List[np.ndarray]
         4d list with the numpy arrays containing the training and validation
-        data [train_images, train_labels, validation_images, validation_labels].
+        data [train_images, train_labels, test_images, test_labels].
     """
 
     log.info(f"\nLoading MNIST data from: {raw_dir}")
@@ -80,15 +79,15 @@ def load_mnist(raw_dir: str, train_version: Union[str, int] = "all") -> List[np.
     log.info(f"Shape of training images: {train_images.shape}")
 
     data = np.load(raw_dir + "/test.npz")
-    validation_images = data["images"]
-    log.info(f"Shape of validation images: {validation_images.shape}")
-    validation_labels = data["labels"]
+    test_images = data["images"]
+    log.info(f"Shape of validation images: {test_images.shape}")
+    test_labels = data["labels"]
 
     data_out = [
         train_images,
         train_labels,
-        validation_images,
-        validation_labels,
+        test_images,
+        test_labels,
     ]
 
     return data_out
@@ -135,7 +134,7 @@ def preprocess(data: List[np.ndarray], m2: int = 0, s2: int = 1) -> List[torch.T
     ----------
     data : list
         the MNIST data in the form of a 4d list with numpy arrays
-        [train_images, train_labels, validation_images, validation_labels]
+        [train_images, train_labels, test_images, test_labels]
     m2: int
         the new desired mean for the normalized images
     s2: int
@@ -152,24 +151,15 @@ def preprocess(data: List[np.ndarray], m2: int = 0, s2: int = 1) -> List[torch.T
         "\nPreprocessing data: Converting to tensor and normalizing with μ=0 and σ=1"
     )
 
-    # If we were using the mean and std. dev. of Imagenet, it would look like this:
-    # (however, this is only essential if we are using an Imagenet pretrained model)
-    # transforms = T.Compose([
-    #                   T.ToTensor(),
-    #                   T.Normalize(
-    #                     mean=[0.485, 0.456, 0.406],
-    #                     std=[0.229, 0.224, 0.225])
-    #             ])
-
-    train_images, train_labels, valid_images, valid_labels = data
+    train_images, train_labels, test_images, test_labels = data
     log.info(
-        f"Shape of [train_images, train_labels, valid_images, valid_labels]: {np.shape(train_images), np.shape(train_labels), np.shape(valid_images), np.shape(valid_labels)}"
+        f"Shape of [train_images, train_labels, test_images, test_labels]: {np.shape(train_images), np.shape(train_labels), np.shape(test_images), np.shape(test_labels)}"
     )
 
     # normalize images
     log.info("Normalizing images and labels")
     xs_norm = []
-    for x in [train_images, valid_images]:
+    for x in [train_images, test_images]:
         log.info(f"Shape of x vector (should be mx28x28): {np.shape(x)}")
 
         # extract initial mean and std. dev.
@@ -188,8 +178,8 @@ def preprocess(data: List[np.ndarray], m2: int = 0, s2: int = 1) -> List[torch.T
 
         xs_norm.append(x_norm)
 
-    train_images_norm, valid_images_norm = xs_norm
-    data_out = [train_images_norm, train_labels, valid_images_norm, valid_labels]
+    train_images_norm, test_images_norm = xs_norm
+    data_out = [train_images_norm, train_labels, test_images_norm, test_labels]
 
     return data_out
 
@@ -202,9 +192,9 @@ def save_data(data: List[np.ndarray], save_dir: str) -> None:
     ----------
     data : list
         the MNIST data in the form of a 4d list with normalized tensors (m=0,
-        s=1) [train_images, train_labels, validation_images, validation_labels]
+        s=1) [train_images, train_labels, test_images, test_labels]
     save_dir : str
-        the directory where the normalized tensors should be saved in as .pt files
+        the directory where the normalized arrays should be saved in as .npz files
 
     Returns
     -------
@@ -218,11 +208,11 @@ def save_data(data: List[np.ndarray], save_dir: str) -> None:
         os.makedirs(save_dir)
         open(save_dir + "/.gitkeep", "w").close()
 
-    train_images, train_labels, valid_images, valid_labels = data
-    torch.save(train_images, save_dir + "/train_images.pt")
-    torch.save(train_labels, save_dir + "/train_labels.pt")
-    torch.save(valid_images, save_dir + "/valid_images.pt")
-    torch.save(valid_labels, save_dir + "/valid_labels.pt")
+    train_images, train_labels, test_images, test_labels = data
+    np.save(save_dir + "/train_images", train_images)
+    np.save(save_dir + "/train_labels", train_labels)
+    np.save(save_dir + "/test_images", test_images)
+    np.save(save_dir + "/test_labels", test_labels)
 
 
 @click.command()
@@ -245,7 +235,7 @@ def main(input_datadir: str, output_datadir: str) -> None:
     ----------
     input_datadir : str, argument
         the MNIST data in the form of a 4d list with normalized tensors (m=0, s=1)
-        [train_images, train_labels, validation_images, validation_labels]
+        [train_images, train_labels, test_images, test_labels]
     output_datadir : str, argument
         the directory where the normalized tensors should be saved in as .pt files
 

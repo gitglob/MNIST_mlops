@@ -3,5 +3,6 @@ defaults:
   - general_conf
   - model_conf
   - training_conf
+  - wandb_conf
 
 name: exp_config
