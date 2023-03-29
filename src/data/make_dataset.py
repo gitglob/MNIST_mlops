@@ -248,8 +248,8 @@ def main(input_datadir: str, output_datadir: str) -> None:
     project_dir = Path(__file__).resolve().parents[2]
 
     # get hydra diretories
-    conf_dir = os.path.join(project_dir, "conf")
-    conf_path = os.path.join(conf_dir, "config.yaml")
+    # conf_dir = os.path.join(project_dir, "conf")
+    # conf_path = os.path.join(conf_dir, "config.yaml")
 
     # initialize Hydra with the path to the config.yaml file
     hydra.initialize(version_base=None, config_path="../../conf")

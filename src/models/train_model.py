@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Callable, Optional, Tuple, Union
 
 import hydra
 import pytorch_lightning as pl
