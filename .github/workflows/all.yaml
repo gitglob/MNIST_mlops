@@ -107,4 +107,5 @@ jobs:
           file: trainer.dockerfile
           push: true
           tags: ${{ secrets.DOCKER_HUB_REPOSITORY }}:${{ github.sha }}
-
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GIT_TOKEN }}
