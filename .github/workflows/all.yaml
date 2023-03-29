@@ -17,7 +17,7 @@ jobs:
 
       # Setup Python
       - name: Set up Python 3.8
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
           
@@ -30,8 +30,9 @@ jobs:
         run: 
           # Sets an output bariable with the name dir.
           # Retrieves the path of the directory where pip cache is stored and the output of this command is captured and assigned to the output variable dir.
+          # echo "::set-output name=dir::$(pip cache dir)"
           |
-          echo "::set-output name=dir::$(pip cache dir)"
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: Cache dependencies
         uses: actions/cache@v3
@@ -86,7 +87,7 @@ jobs:
 
       # Docker
       - name: Login to Docker Hub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
@@ -98,7 +99,7 @@ jobs:
           images: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: trainer.dockerfile
