@@ -1,8 +1,8 @@
-name: "Cache dependencies, set up Python and DVC, test with Pytest, build and push a Docker image."
+name: "Cache dependencies, set up Python and DVC, test with Pytest, run flake8 and isort, build and push a Docker image."
 
 on:
   push:
-    branches: [ main, CI ]
+    branches: [ main , CI ]
   pull_request:
     branches: [ main ]
 
