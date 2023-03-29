@@ -34,7 +34,9 @@ jobs:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ matrix.os }}-py${{ matrix.python-version }}-pt${{ matrix.pytorch-version }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ matrix.os }}-py${{ matrix.python-version }}-pt${{ matrix.pytorch-version }}-pip-
+            ${{ matrix.os }}-py
+            ${{ matrix.python-version }}-pt
+            ${{ matrix.pytorch-version }}-pip-
 
       - name: Install dependencies
         run: |
