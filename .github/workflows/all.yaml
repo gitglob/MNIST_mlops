@@ -2,7 +2,7 @@ name: "Cache dependencies, set up Python and DVC, test with Pytest, build and pu
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, CI ]
   pull_request:
     branches: [ main ]
 
