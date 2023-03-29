@@ -2,7 +2,7 @@ name: "Cache dependencies, set up Python and DVC, test with Pytest, run flake8 a
 
 on:
   push:
-    branches: [ main , CI ]
+    branches: [ CI ]
   pull_request:
     branches: [ main ]
 
@@ -24,20 +24,35 @@ jobs:
 
       # Cache
       - name: Get pip cache dir
+        # The id of the step can then be used in subsequent steps to reference the output variable that was set. 
+        # For example, in the Cache dependencies step, the path field is set to ${{ steps.pip-cache.outputs.dir }}
         id: pip-cache
-        run: |
+        run: 
+          # Sets an output bariable with the name dir.
+          # Retrieves the path of the directory where pip cache is stored and the output of this command is captured and assigned to the output variable dir.
+          |
           echo "::set-output name=dir::$(pip cache dir)"
 
       - name: Cache dependencies
         uses: actions/cache@v3
         with:
+          # Path to the directory that needs to be cached.
           path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ matrix.os }}-py${{ matrix.python-version }}-pt${{ matrix.pytorch-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+          # This is the key that will be used to identify the cached dependencies. It is composed of a combination of the operating system (matrix.os), 
+          # Python version (matrix.python-version), PyTorch version (matrix.pytorch-version), and the hashed contents of the requirements.txt file 
+          key: |
+            ${{ matrix.os }}-py
+            ${{ matrix.python-version }}-pt
+            ${{ matrix.pytorch-version }}-pip-
+            ${{ hashFiles('**/requirements.txt') }}
+          # Which keys should be used to restore the cache if it exists
           restore-keys: |
             ${{ matrix.os }}-py
             ${{ matrix.python-version }}-pt
             ${{ matrix.pytorch-version }}-pip-
 
+
+      # install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
