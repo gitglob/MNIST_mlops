@@ -74,6 +74,7 @@ jobs:
         run: pytest -v tests/
 
 
+      # ignore flake8 cause it creates issues with large comments and links
       # Flake8
       # - name: Run flake8
       #   run: flake8 .
