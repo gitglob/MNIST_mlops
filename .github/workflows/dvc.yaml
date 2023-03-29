@@ -1,0 +1,16 @@
+name: Pull DVC data
+
+on:
+  push:
+    branches: [ main , CI ]
+
+jobs:
+  build:
+    runs-on: [ubuntu-latest]
+    steps:        
+      - uses: iterative/setup-dvc@v1
+      
+      - name: Get data
+        run: dvc pull
+        env:
+          GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
