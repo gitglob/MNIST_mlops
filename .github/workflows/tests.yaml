@@ -2,14 +2,14 @@ name: "Run tests"
 
 on:
   push:
-    branches: [ master, main , lightning]
+    branches: [ main , CI]
   pull_request:
-    branches: [ master, main ]
+    branches: [ main ]
 
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
     - name: Checkout

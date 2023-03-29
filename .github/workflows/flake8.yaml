@@ -2,9 +2,9 @@ name: "Run tests"
 
 on:
   push:
-    branches: [ master, main , lightning]
+    branches: [ main , CI]
   pull_request:
-    branches: [ master, main ]
+    branches: [ main ]
 
 jobs:
   build:
