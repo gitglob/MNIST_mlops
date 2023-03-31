@@ -14,6 +14,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: iterative/setup-cml@v1
 
+      - name: Install wandb
+        run: pip install wandb
       - name: Set up Weights and Biases
         run: |
           wandb login ${{ secrets.WANDB_API_KEY }}
