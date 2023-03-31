@@ -1,2 +1,5 @@
 isort
 flake8
+
+coverage
+pytest

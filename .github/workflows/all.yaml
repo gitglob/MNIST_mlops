@@ -73,6 +73,10 @@ jobs:
       # Pytest
       - name: Test with pytest
         run: pytest -v tests/
+      - name: Run tests and Generate Coverage Report
+        run: |
+          coverage run -m pytest tests/
+          coverage xml -i --omit=*/tests/* -o reports/coverage_report.xml
 
 
       # ignore flake8 cause it creates issues with large comments and links

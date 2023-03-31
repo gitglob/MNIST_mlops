@@ -73,7 +73,7 @@ jobs:
       - name: Write report
         env:
           # this authenticates that the right permissions are in place
-          REPO_TOKEN: $
+          REPO_TOKEN: ${{ secrets.GIT_TOKEN }}
         run:
           # send all information to report.md that will be reported to us when the workflow finish 
           |
