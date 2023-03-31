@@ -70,6 +70,8 @@ jobs:
       - name: Train model
         # install dependencies and run training 
         run: python src/models/train_model_cml.py
+
+      # Write report
       - name: Write report
         env:
           # this authenticates that the right permissions are in place
@@ -77,6 +79,6 @@ jobs:
         run:
           # send all information to report.md that will be reported to us when the workflow finish 
           |
-          cat classification_report.txt >> report.md
-          cml-publish confusion_matrix.png --md >> report.md
+          cat reports/classification_report.txt >> report.md
+          cml-publish reports/figures/confusion_matrix.png --md >> report.md
           cml-send-comment report.md
