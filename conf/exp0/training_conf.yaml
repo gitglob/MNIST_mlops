@@ -1,4 +1,4 @@
 # @package _train_
 check_every: 2
-epochs: 3
+epochs: 1
 batch_size: 32

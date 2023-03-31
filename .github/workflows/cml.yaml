@@ -1,0 +1,30 @@
+name: train-my-model
+
+on:
+  push:
+    branches: [ CML ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run:
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: iterative/setup-cml@v1
+      - name: Train model
+        run: 
+            # install dependencies and run training 
+            |
+            pip install -r requirements.txt
+            python src/models/train_model_cml.py
+      - name: Write report
+        env:
+          # this authenticates that the right permissions are in place
+          REPO_TOKEN: $
+        run:
+          # send all information to report.md that will be reported to us when the workflow finish 
+          |
+          cat classification_report.txt >> report.md
+          cml-publish confusion_matrix.png --md >> report.md
+          cml-send-comment report.md
