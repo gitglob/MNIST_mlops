@@ -13,6 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: iterative/setup-cml@v1
+
+      - name: Set up Weights and Biases
+        run: |
+          wandb login ${{ secrets.WANDB_API_KEY }}
+
       - name: Train model
         run: 
             # install dependencies and run training 
