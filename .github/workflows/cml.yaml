@@ -14,16 +14,49 @@ jobs:
       - uses: actions/checkout@v3
       - uses: iterative/setup-cml@v1
 
+      # Cache
+      - name: Get pip cache dir
+        # The id of the step can then be used in subsequent steps to reference the output variable that was set. 
+        # For example, in the Cache dependencies step, the path field is set to ${{ steps.pip-cache.outputs.dir }}
+        id: pip-cache
+        run: 
+          # Sets an output bariable with the name dir.
+          # Retrieves the path of the directory where pip cache is stored and the output of this command is captured and assigned to the output variable dir.
+          |
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          # Path to the directory that needs to be cached.
+          path: ${{ steps.pip-cache.outputs.dir }}
+          # This is the key that will be used to identify the cached dependencies. It is composed of a combination of the operating system (matrix.os), 
+          # Python version (matrix.python-version), PyTorch version (matrix.pytorch-version), and the hashed contents of the requirements.txt file 
+          key: |
+            ${{ matrix.os }}-py
+            ${{ matrix.python-version }}-pt
+            ${{ matrix.pytorch-version }}-pip-
+            ${{ hashFiles('**/requirements.txt') }}
+          # Which keys should be used to restore the cache if it exists
+          restore-keys: |
+            ${{ matrix.os }}-py
+            ${{ matrix.python-version }}-pt
+            ${{ matrix.pytorch-version }}-pip-
+
+      # install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements_tests.txt
+
       # Wandb
-      - name: Install wandb
-        run: pip install wandb
       - name: Set up Weights and Biases
         run: |
           wandb login ${{ secrets.WANDB_API_KEY }}
 
       # DVC
       - uses: iterative/setup-dvc@v1
-      
       - name: Get data
         run: dvc pull
         env:
@@ -35,11 +68,8 @@ jobs:
 
       # Train
       - name: Train model
-        run: 
-            # install dependencies and run training 
-            |
-            pip install -r requirements.txt
-            python src/models/train_model_cml.py
+        # install dependencies and run training 
+        run: python src/models/train_model_cml.py
       - name: Write report
         env:
           # this authenticates that the right permissions are in place
