@@ -77,7 +77,7 @@ jobs:
           # this authenticates that the right permissions are in place
           REPO_TOKEN: ${{ secrets.GIT_TOKEN }}
         run:
-          # send all information to report.md that will be reported to us when the workflow finish 
+          # send all information to report.md that will be reported to us when the workflow finish
           |
           cat reports/classification_report.txt >> report.md
           cml-publish reports/figures/confusion_matrix.png --md >> report.md
