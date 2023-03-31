@@ -8,6 +8,7 @@ on:
 
 jobs:
   run:
+    name: cml_workflow
     runs-on: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v3

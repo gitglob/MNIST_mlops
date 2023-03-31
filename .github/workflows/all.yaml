@@ -2,12 +2,13 @@ name: "Cache dependencies, set up Python and DVC, test with Pytest, run flake8 a
 
 on:
   push:
-    branches: [ CI ]
+    branches: [ CI , CML ]
   pull_request:
     branches: [ main ]
 
 jobs:
   build:
+    name: ci_workflow
     runs-on: [ubuntu-latest] #[macos-latest, ubuntu-latest, windows-latest]
     steps:
       # Checkout
