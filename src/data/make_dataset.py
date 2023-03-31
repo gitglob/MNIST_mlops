@@ -218,12 +218,12 @@ def save_data(data: List[np.ndarray], save_dir: str) -> None:
 @click.command()
 @click.argument(
     "input_datadir",
-    default="/home/glob/Documents/github/MNIST_mlops/data/raw",
+    default="data/raw",
     type=click.Path(exists=True),
 )
 @click.argument(
     "output_datadir",
-    default="/home/glob/Documents/github/MNIST_mlops/data/processed",
+    default="data/processed",
     type=click.Path(),
 )
 def main(input_datadir: str, output_datadir: str) -> None:
@@ -244,8 +244,12 @@ def main(input_datadir: str, output_datadir: str) -> None:
     None
     """
 
-    # not used in this stub but often useful for finding various files
+    # set the base project directory
     project_dir = Path(__file__).resolve().parents[2]
+
+    # construct absolute paths relative to the current working directory
+    input_datadir = os.path.join(project_dir, input_datadir)
+    output_datadir = os.path.join(project_dir, output_datadir)
 
     # get hydra diretories
     # conf_dir = os.path.join(project_dir, "conf")
