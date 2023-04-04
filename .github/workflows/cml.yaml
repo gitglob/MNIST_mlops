@@ -80,6 +80,5 @@ jobs:
           # send all information to report.md that will be reported to us when the workflow finish
           |
           cat reports/classification_report.txt >> report.md
-          echo "![inline](reports/figures/confusion_matrix.png)" >> report.md
-#          cml-publish reports/figures/confusion_matrix.png --md >> report.md
-          cml comment create report.md
+          cml-publish reports/figures/confusion_matrix.png --md >> report.md
+          cml-send-comment report.md
