@@ -9,9 +9,10 @@ import torch
 from model import MyModel
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+import torch.multiprocessing as mp
+mp.set_sharing_strategy('file_system')
 
 log = logging.getLogger(__name__)
-
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config.yaml")
 def main(cfg) -> None:
@@ -62,6 +63,9 @@ def main(cfg) -> None:
     # test model
     trainer.test(model, data_module)
 
+    # produce classification report and confusion matrix
+    report(model, data_module.train_dataloader())
+
 
 if __name__ == "__main__":
     # setup logging format
@@ -76,5 +80,6 @@ if __name__ == "__main__":
     sys.path.append(import_dir_data)
 
     from data_module import MnistDataModule
+    from visualize import report
 
     main()

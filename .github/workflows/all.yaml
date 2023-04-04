@@ -1,0 +1,123 @@
+name: "Cache dependencies, set up Python and DVC, test with Pytest, run flake8 and isort, build and push a Docker image."
+
+on:
+  push:
+    branches: [ CI ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: ci_workflow
+    runs-on: [ubuntu-latest] #[macos-latest, ubuntu-latest, windows-latest]
+    steps:
+      # Checkout
+      - name: Checkout
+        uses: actions/checkout@v3
+
+
+      # Setup Python
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+          
+
+      # Cache
+      - name: Get pip cache dir
+        # The id of the step can then be used in subsequent steps to reference the output variable that was set. 
+        # For example, in the Cache dependencies step, the path field is set to ${{ steps.pip-cache.outputs.dir }}
+        id: pip-cache
+        run: 
+          # Sets an output bariable with the name dir.
+          # Retrieves the path of the directory where pip cache is stored and the output of this command is captured and assigned to the output variable dir.
+          |
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          # Path to the directory that needs to be cached.
+          path: ${{ steps.pip-cache.outputs.dir }}
+          # This is the key that will be used to identify the cached dependencies. It is composed of a combination of the operating system (matrix.os), 
+          # Python version (matrix.python-version), PyTorch version (matrix.pytorch-version), and the hashed contents of the requirements.txt file 
+          key: |
+            ${{ matrix.os }}-py
+            ${{ matrix.python-version }}-pt
+            ${{ matrix.pytorch-version }}-pip-
+            ${{ hashFiles('**/requirements.txt') }}
+          # Which keys should be used to restore the cache if it exists
+          restore-keys: |
+            ${{ matrix.os }}-py
+            ${{ matrix.python-version }}-pt
+            ${{ matrix.pytorch-version }}-pip-
+
+
+      # install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements_tests.txt
+
+
+      # DVC
+      - uses: iterative/setup-dvc@v1
+      
+      - name: Get data
+        run: dvc pull
+        env:
+          GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
+
+
+      # Pytest
+      - name: Test with pytest
+        run: pytest -v tests/
+      - name: Run tests and Generate Coverage Report
+        run: |
+          coverage run -m pytest tests/
+          coverage xml -i --omit=*/tests/* -o reports/coverage_report.xml
+
+
+      # ignore flake8 cause it creates issues with large comments and links
+      # Flake8
+      # - name: Run flake8
+      #   run: flake8 .
+
+
+      # Isort
+      - name: Run isort
+        run: isort -rc .
+
+      # Docker
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v2
+
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v2
+      #   with:
+      #     username: ${{ secrets.DOCKER_HUB_USERNAME }}
+      #     password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      # - name: Extract metadata (tags, labels) for Docker
+      #   id: meta
+      #   uses: docker/metadata-action@v4
+      #   with:
+      #     images: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}
+
+      # - name: Build and push Docker image
+      #   uses: docker/build-push-action@v4
+      #   with:
+      #     context: .
+      #     file: trainer.dockerfile
+      #     push: true
+      #     tags: ${{ secrets.DOCKER_HUB_REPOSITORY }}:${{ github.sha }}
+      #     secrets: |
+      #       GIT_AUTH_TOKEN=${{ secrets.GIT_TOKEN }}
+      - name: Build the Docker image
+        run: |
+          echo "$" | docker login \
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" -p "${{ secrets.DOCKER_HUB_TOKEN }}" docker.io
+          docker build . --file trainer.dockerfile \
+            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA

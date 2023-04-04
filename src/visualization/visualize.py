@@ -12,11 +12,32 @@ import numpy as np
 import torch
 from PIL import Image
 from sklearn.manifold import TSNE
+from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 
 import wandb
 
 log = logging.getLogger(__name__)
 
+def report(model, train_dataloader):
+    '''Produce classification report and confusion matrix.'''
+    preds, target = [], []
+    for batch in train_dataloader:
+        x, y = batch
+        probs = model(x)
+        preds.append(probs.argmax(dim=-1))
+        target.append(y.detach())
+
+    target = torch.cat(target, dim=0)
+    preds = torch.cat(preds, dim=0)
+
+    report = classification_report(target, preds)
+    with open("reports/classification_report.txt", 'w') as outfile:
+        outfile.write(report)
+    confmat = confusion_matrix(target, preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix = confmat, display_labels=np.arange(10).tolist())
+    plt.figure(figsize=(8, 8), dpi=100)
+    disp.plot(cmap=plt.cm.Blues)
+    plt.savefig('reports/figures/confusion_matrix.png', dpi=100)
 
 def visualize_metrics(
     e: int,
