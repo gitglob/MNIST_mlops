@@ -1,6 +1,17 @@
 # Ignore temp folder
 tmp
 
+# Ignore logs
+logs
+deployment/logs
+
+# Ignore app pycache
+app/__pycache__
+
+# ignore the models for the APIs
+deployment/cloud/*.pkl
+deployment/model_store
+
 # Ignore earlier figures and models
 models/*
 !models/.gitkeep
