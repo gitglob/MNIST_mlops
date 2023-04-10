@@ -6,9 +6,22 @@ Description and Motivation
 This is a ML project on the popular MNIST fashion dataset. 
 
 The motivation behind the project isn't diving deep into NN architectures and optimizing 
-given metrics, but more so organizing the project in a correct, formal way using proper 
-coding techniques like type hinting and available tools and libraries like dvc, 
-cookiecutter, black, isort etc...
+given metrics, but more so organizing the project in a correct, formal way and applying 
+MLOps techniques.
+
+Some tools, libraries and techniques that were used were:
+- Github and DVC for code and data version control.
+- Cookiecutter, black, isort, flake8 and Typing for good coding practices.
+- Docker and Hydra for reproducibility.
+- Pdb for debugging.
+- Pytorch and Tensorboard for profiling.
+- WandB for experiment logging.
+- Pytorch Lightning for minimizing boilerplate.
+- Github Actions for Continuous Integration and Continuous Machine Learning.
+- Google Cloud Platform, Torchserve and FastAPI for API creation and model deployment locally and on the cloud.
+
+In summary, I developped a NN using Pytorch Lightning and a CI pipeline using github, dvc and docker.
+Then, I created a FastAPI app with that model and deployed it at the Google Cloud Platform.
 
 This project follows step by step the guidelines prodived by DTU's course 02476: Machine 
 Learning Operations.
